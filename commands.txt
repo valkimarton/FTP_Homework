@@ -1,0 +1,6 @@
+Start network:
+    python3 netsim/network.py -p './network/' -a 'ABCS' --clean
+Start server:
+     python3 server.py -p './network/' -a S
+Start client:
+    python3 sender.py -p './network/' -a C
