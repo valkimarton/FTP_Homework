@@ -3,4 +3,4 @@ Start network:
 Start server:
      python3 server.py -p './network/' -a S
 Start client:
-    python3 sender.py -p './network/' -a C
+    python3 client.py -p './network/' -a C

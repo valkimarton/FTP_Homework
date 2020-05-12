@@ -14,12 +14,12 @@ OWN_ADDR = 'B'
 try:
     opts, args = getopt.getopt(sys.argv[1:], shortopts='hp:a:', longopts=['help', 'path=', 'addr='])
 except getopt.GetoptError:
-    print('Usage: python receiver.py -p <network path> -a <own addr>')
+    print('Usage: python server.py -p <network path> -a <own addr>')
     sys.exit(1)
 
 for opt, arg in opts:
     if opt == '-h' or opt == '--help':
-        print('Usage: python receiver.py -p <network path> -a <own addr>')
+        print('Usage: python server.py -p <network path> -a <own addr>')
         sys.exit(0)
     elif opt == '-p' or opt == '--path':
         NET_PATH = arg
@@ -40,6 +40,7 @@ if OWN_ADDR not in network_interface.addr_space:
 
 # main loop
 netif = network_interface(NET_PATH, OWN_ADDR)
+print(OWN_ADDR)
 print('Main loop started...')
 while True:
     # Calling receive_msg() in non-blocking mode ...
