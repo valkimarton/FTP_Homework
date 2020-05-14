@@ -1,5 +1,5 @@
 from netsim.netinterface import network_interface
-
+from messages import HandshakeMessage
 
 class Server:
     def __init__(self, network_path, own_address):
@@ -7,14 +7,20 @@ class Server:
         self.own_address = own_address
         self.networkIF = network_interface(network_path, own_address)
 
-    def mainLoop(self):
+        self.active_client = ''
+        self.session_key = ''
+        self.sequence_number = -1
+
+
+    def main_loop(self):
         print('Server main loop started...')
 
         while True:
-            status, msg = self.networkIF.receive_msg(blocking=True)  # when returns, status is True and msg contains a message
-            message = msg.decode('utf-8')
+            status, bytes_message = self.networkIF.receive_msg(blocking=True)  # when returns, status is True and msg contains a message
+            message = HandshakeMessage.HandshakeMessage()
+            message.from_bytes(bytes_message)
 
-            print(message)
+            message.print()
 
             response = 'ACK'
             self.networkIF.send_msg('C', response.encode('utf-8'))
@@ -23,3 +29,10 @@ class Server:
 
     def print(self):
         print('Address: ' + self.own_address + '\n' + 'Network path: ' + self.network_path)
+
+    def initSession(self, client):
+        self.importSharedSecret()
+
+    def importSharedSecret(self, client):
+        pass
+

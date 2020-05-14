@@ -46,4 +46,4 @@ if OWN_ADDR not in network_interface.addr_space:
 
 server = Server(NET_PATH, OWN_ADDR)
 server.print()
-server.mainLoop()
+server.main_loop()

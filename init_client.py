@@ -10,7 +10,7 @@ from client import Client
 # Read command line arguments
 # ------------
 
-NET_PATH = './'
+NET_PATH = './network'
 OWN_ADDR = 'A'
 
 try:
@@ -47,4 +47,4 @@ if OWN_ADDR not in network_interface.addr_space:
 
 client = Client(NET_PATH, OWN_ADDR)
 client.print()
-client.mainLoop()
+client.main_loop()
