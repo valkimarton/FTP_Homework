@@ -1,4 +1,5 @@
 Start network:
+    1) csináljatok egy 'network' nevű mappát a FTP_Homework gyökérmappában, utána jöhet a parancs
     python3 netsim/network.py -p './network/' -a 'ABCS' --clean
 Start server:
      python3 init_server.py -p './network/' -a S
