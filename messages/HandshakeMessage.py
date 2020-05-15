@@ -4,7 +4,7 @@ from utils.constants import *
 
 class HandshakeMessage(AbstractMessage):
 
-    def __init__(self, client: str = '', type: str = '', timestamp: int = -1, payload: str = ''):
+    def __init__(self, client: str = '', type: str = '', timestamp: int = -1, payload: bytes = b''):
         super().__init__(HANDSHAKE_MESSAGE_ID, client, type, timestamp, payload)
 
     '''
@@ -22,7 +22,7 @@ class HandshakeMessage(AbstractMessage):
         self.timestamp = self.get_valid_timestamp_or_throw(bytestring)
         self.payload = self.get_payload(bytestring)
 
-    def get_payload(self, bytestring: bytes) -> str:
-        return bytestring[16:].decode('utf-8')
+    def get_payload(self, bytestring: bytes) -> bytes:
+        return bytestring[16:]
 
     # ....

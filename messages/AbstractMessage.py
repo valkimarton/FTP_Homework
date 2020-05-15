@@ -1,29 +1,31 @@
 from pprint import pprint
+import time
 
 from netsim.netinterface import *
 from utils.constants import *
+from utils.GeneralUtils import *
 
 # The class is not really abstract, but should not be instantiated :)
 
 class AbstractMessage:
 
-    def __init__(self, id: str, client: str, type: str, timestamp: int, payload: str):
+    def __init__(self, id: str, client: str, type: str, timestamp: int, payload: bytes):
         self.id = id
         self.client = client
         self.type = type
-        self.len = len(payload)  # the Message object contains the plaintext message -> payload = string
+        self.len = len(payload)  # the Message object contains the unencrypted message in bytes -> payload = bytes
         self.timestamp = timestamp
-        self.payload = payload
+        if isinstance(payload, bytes):
+            self.payload: bytes = payload
+        else:
+            raise Exception('payload type must be: bytes')
 
     # change to to_bytestring
     def to_bytes(self) -> bytes:
-        return self.header_to_bytes() + self.payload_to_bytes()
+        return self.header_to_bytes() + self.payload
 
     def header_to_bytes(self) -> bytes:
         return self.id.encode('utf-8') + self.client.encode('utf-8') + self.type.encode('utf-8') + self.len_to_byte() + self.timestamp_to_byte()
-
-    def payload_to_bytes(self) -> bytes:
-        return self.payload.encode('utf-8')
 
     def from_bytes(self, bytestring):
         print('Implemented in subclasses. Tries to create a message object from the string parameter')
@@ -37,19 +39,19 @@ class AbstractMessage:
     def get_valid_id_or_throw(self, bytestring: bytes) -> str:
         id = bytestring[0:1].decode('utf-8')
         if id not in ID_SPACE:
-            raise Exception('Invalid message ID')
+            raise Exception('Invalid message ID: ' + id)
         return id
 
     def get_valid_client_or_throw(self, bytestring: bytes) -> str:
         client = bytestring[1:2].decode('utf-8')
         if client not in CLIENT_SPACE:
-            raise Exception('Invalid Client identifier')
+            raise Exception('Invalid Client identifier: ' + client)
         return client
 
     def get_valid_type_or_throw(self, bytestring: bytes, message_id: str) -> str:
         type = bytestring[2:5].decode('utf-8')
         if type not in TYPE_SPACE[message_id]:
-            raise Exception('Invalid type field for message id: ' + message_id)
+            raise Exception('Invalid type field: ' + type + 'for message id: ' + message_id)
         return type
 
     def get_len(self, bytestring: bytes) -> int:
@@ -57,12 +59,13 @@ class AbstractMessage:
 
     def get_valid_timestamp_or_throw(self, bytestring: bytes) -> int:
         timestamp = int.from_bytes(bytestring[6:16], byteorder='big')
-
-        # validation logic here?
-
+        if timestamp > get_current_timestamp():
+            raise Exception('message timestamp is bigger than current time')
+        # if timestamp < get_random_session_key() - 30:         TODO
+        #     raise Exception('message timestamp is too old')
         return timestamp
 
-    def get_payload(self, bytestring: bytes) -> str:
+    def get_payload(self, bytestring: bytes) -> bytes:
         print('Should be implemented in subclasses')
 
     def len_to_byte(self) -> bytes:
