@@ -1,5 +1,9 @@
+import time
+
 from netsim.netinterface import network_interface
 from messages.HandshakeMessage import HandshakeMessage
+from utils.GeneralUtils import *
+from utils.enums import *
 
 class Client:
 
@@ -8,27 +12,105 @@ class Client:
 		self.own_address = own_address
 		self.networkIF = network_interface(network_path, own_address)
 
+		self.connected_to_server = False
+		self.server_address = ''
+
 		self.session_key = ''
 		self.sequence_number = -1
 
 	def main_loop(self):
 		print('Client main loop started...')
 		while True:
-			data = input('Type a message: ')
-			dst = input('Type a destination address: ')
 
-			message = HandshakeMessage(self.own_address, 'NEW', 123456789, data)
-			message_bytes = message.to_bytes()
+			# Handshake loop until succesful handshake
+			while not self.connected_to_server:
+				self.connect_to_server()
 
-			self.networkIF.send_msg(dst, message_bytes)
+			# Command loop until a FINISH command
+			while True:
+				command = input('Type a command: ')
+				if command == 'FIN':
+					self.disconnect_from_server()
+					break
+				elif command == 'MKD':
+					print('Not implemented...')
+				########
+				# Other commands here
+				########
+				else:
+					print('Invalid command')
 
-			status, rsp = self.networkIF.receive_msg(blocking=True)
-			response = rsp.decode('utf-8')
-			print('response: ' + response)
 
 			if input('Continue? (y/n): ') == 'n': break
 
 		print('Client main loop ended...')
+
+	def connect_to_server(self):
+		self.server_address = input('Initiating connection. Type server address: ')
+
+		password = input('Type your password: ')
+		payload = password.encode('utf-8')
+		timestamp = get_current_timestamp()
+
+		# NEW
+		message = HandshakeMessage(self.own_address, HandshakeMessageTypes.NEW, timestamp, payload)
+		self.networkIF.send_msg(self.server_address, message.to_bytes())
+
+		# Handle response
+		time.sleep(2) 	# REMOVE
+		status, rsp = self.networkIF.receive_msg(blocking=False)
+		if status:
+			response = HandshakeMessage()
+			response.from_bytes(rsp)
+			if response.type == HandshakeMessageTypes.NEW_ACK:
+				self.create_session(response)
+			else:
+				pass
+
+			print('Response (NEW_ACK): ')
+			response.print()
+		else:
+			print('No answer arrived in 2 seconds')
+
+	def create_session(self, response: HandshakeMessage):
+		self.session_key = response.payload
+		self.sequence_number = 0
+		self.connected_to_server = True
+		print('Session created with server: ' + self.server_address + ', shared secret: ', self.session_key)
+
+	def disconnect_from_server(self):
+
+		message = HandshakeMessage(self.own_address, HandshakeMessageTypes.FIN, get_current_timestamp())
+		self.networkIF.send_msg(self.server_address, message.to_bytes())
+
+		# wait for FIN ACK
+		time.sleep(2)
+		status, rsp = self.networkIF.receive_msg(blocking=False)
+		if status:
+			response = HandshakeMessage()
+			response.from_bytes(rsp)
+			if response.type == HandshakeMessageTypes.FIN_ACK:
+				self.reset_state()
+				print('Session closed (Partially implemented...)')
+			else:
+				print('Anticipated FIN_ACK, but got something else...')
+		else:
+			print('No response arrived to FIN')
+
+		'''
+		Handshake process incomplete
+		'''
+
+		print('Closing Handshake Partially implemented...')
+
+	def reset_state(self):
+		self.server_address = ''
+		self.connected_to_server = False
+		self.session_key = ''
+		self.sequence_number = -1
+
+	def call_wait_retry(self, call_to_make, wait_length, num_of_reties):
+		print('Not implemented')
 
 	def print(self):
 		print('Address: ' + self.own_address + '\n' + 'Network path: ' +  self.network_path)
