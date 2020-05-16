@@ -55,7 +55,7 @@ class AbstractMessage:
 
     # getting LEN from bytestring
     def get_len(self, bytestring: bytes) -> int:
-        return int.from_bytes(bytestring[5:6], byteorder='big')
+        return int.from_bytes(bytestring[5:6], byteorder='big') * 16
 
     # getting TIMESTAMP from bytestring + validation
     def get_valid_timestamp_or_throw(self, bytestring: bytes) -> int:
