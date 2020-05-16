@@ -10,19 +10,23 @@ class Client:
 	def __init__(self, network_path, own_address):
 		self.network_path = network_path
 		self.own_address = own_address
-		self.networkIF = network_interface(network_path, own_address)
+		self.networkInterface = network_interface(network_path, own_address)
 
+		#########
+		# STATE #
+		#########
 		self.connected_to_server = False
 		self.server_address = ''
-
 		self.session_key = ''
 		self.sequence_number = -1
 
 	def main_loop(self):
 		print('Client main loop started...')
+
+		# main loop
 		while True:
 
-			# Handshake loop until succesful handshake
+			# Handshake loop until successful handshake
 			while not self.connected_to_server:
 				self.connect_to_server()
 
@@ -45,6 +49,23 @@ class Client:
 
 		print('Client main loop ended...')
 
+
+
+	##################
+	# NÓRI
+	##################
+
+
+	##################
+	# PETI
+	##################
+
+
+	##################
+	# MARCI
+	##################
+
+	# Csatlakozás kezdeményezése, válasz kezelése, session_state beállítása
 	def connect_to_server(self):
 		self.server_address = input('Initiating connection. Type server address: ')
 
@@ -54,11 +75,11 @@ class Client:
 
 		# NEW
 		message = HandshakeMessage(self.own_address, HandshakeMessageTypes.NEW, timestamp, payload)
-		self.networkIF.send_msg(self.server_address, message.to_bytes())
+		self.networkInterface.send_msg(self.server_address, message.to_bytes())
 
 		# Handle response
 		time.sleep(2) 	# REMOVE
-		status, rsp = self.networkIF.receive_msg(blocking=False)
+		status, rsp = self.networkInterface.receive_msg(blocking=False)
 		if status:
 			response = HandshakeMessage()
 			response.from_bytes(rsp)
@@ -72,20 +93,22 @@ class Client:
 		else:
 			print('No answer arrived in 2 seconds')
 
+	# Session state beállítása
 	def create_session(self, response: HandshakeMessage):
 		self.session_key = response.payload
 		self.sequence_number = 0
 		self.connected_to_server = True
 		print('Session created with server: ' + self.server_address + ', shared secret: ', self.session_key)
 
+	# Kapcsolat bontásának kezdeményezése, válasz kezelése, session lebontása sikeres esetben
 	def disconnect_from_server(self):
 
 		message = HandshakeMessage(self.own_address, HandshakeMessageTypes.FIN, get_current_timestamp())
-		self.networkIF.send_msg(self.server_address, message.to_bytes())
+		self.networkInterface.send_msg(self.server_address, message.to_bytes())
 
 		# wait for FIN ACK
 		time.sleep(2)
-		status, rsp = self.networkIF.receive_msg(blocking=False)
+		status, rsp = self.networkInterface.receive_msg(blocking=False)
 		if status:
 			response = HandshakeMessage()
 			response.from_bytes(rsp)
@@ -109,6 +132,14 @@ class Client:
 		self.session_key = ''
 		self.sequence_number = -1
 
+	# Nem blokkoló mechanizmus parancs elküldésére és válaszra várásra
+	# A válasz elveszése, kései érkezése probléma lehet.
+	# A válasz elveszése esetében a blokkoló várakozásból nem lehet kilépni
+	# Erre lehet csinálni egy ilyen retry-os nem blokkoló várakozásos megoldást, ha nagyon sok időnk van.
+	#
+	# call_to_make: Az elküldendő üzenet
+	# wait_length: várakozási idő két újrapróbálkozás között
+	# num_of_retries: maximum próbálkozások száma
 	def call_wait_retry(self, call_to_make, wait_length, num_of_reties):
 		print('Not implemented')
 

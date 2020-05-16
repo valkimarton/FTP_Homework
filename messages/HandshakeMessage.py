@@ -7,13 +7,10 @@ class HandshakeMessage(AbstractMessage):
     def __init__(self, client: str = '', type: str = '', timestamp: int = -1, payload: bytes = b''):
         super().__init__(HANDSHAKE_MESSAGE_ID, client, type, timestamp, payload)
 
-    '''
+
     def header_to_bytes(self) -> bytes:
         return super().header_to_bytes()          # nem kell se sequence_number, se más itt
 
-    def payload_to_bytes(self) -> bytes:
-        return super().payload_to_bytes()
-    '''
     def from_bytes(self, bytestring):
         self.id = self.get_valid_id_or_throw(bytestring)
         self.client = self.get_valid_client_or_throw(bytestring)

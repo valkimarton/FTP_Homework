@@ -9,10 +9,13 @@ class Server:
     def __init__(self, network_path, own_address):
         self.network_path = network_path
         self.own_address = own_address
-        self.networkIF = network_interface(network_path, own_address)
+        self.networkInterface = network_interface(network_path, own_address)
 
+
+        #########
+        # STATE #
+        #########
         self.connected_to_client = False
-
         self.active_client = ''
         self.session_key = b''
         self.sequence_number = -1
@@ -20,25 +23,28 @@ class Server:
     def main_loop(self):
         print('Server main loop started...')
 
+        # The main loop
         while True:
 
             # HANDSHAKE LOOP - until successfully completed handshake with a client
             while not self.connected_to_client:
                 self.handle_handshake_request()
 
-            # COMMAND LOOP
+            # COMMAND LOOP - Until Client closes connection with FIN-handshake
             while True:
                 print('Waiting for commands')
 
-                status, msg = self.networkIF.receive_msg(blocking=True)
+                status, msg = self.networkInterface.receive_msg(blocking=True)
+
+                # Ha HANDSHAKE típúsú üzenet jön
                 if self.get_message_id(msg) == HANDSHAKE_MESSAGE_ID:
-                    session_ended = self.handle_handshake_messages_during_session(msg)
+                    session_ended = self.handle_handshake_messages_during_session(msg)  # Ha valid FIN üzenet jön -> kapcsolat bontása
                     if session_ended:
                         break
-
+                # Ha COMMAND típúsú üzenet jön
                 elif self.get_message_id(msg) == COMMAND_MESSAGE_ID:
 
-                    self.networkIF.send_msg(self.active_client, b'COMMAND ARRIVED, handling not implemented')
+                    self.networkInterface.send_msg(self.active_client, b'COMMAND ARRIVED, handling not implemented')
 
                     ###############################
                     # COMMAND MESSAGE HANDLING HERE
@@ -49,10 +55,25 @@ class Server:
 
         print('Server main loop ended... (Should not happen)')
 
+    ##################
+    # NÓRI
+    ##################
+
+
+    ##################
+    # PETI
+    ##################
+
+
+    ##################
+    # MARCI
+    ##################
+
+    # A HANDSHAKE loop-ban várja és kezeli az érkező üzeneteket
     def handle_handshake_request(self):
         print('Handling a handshake request...')
 
-        status, msg = self.networkIF.receive_msg(blocking=True)
+        status, msg = self.networkInterface.receive_msg(blocking=True)
         message = HandshakeMessage()
         message.from_bytes(msg)
 
@@ -71,6 +92,7 @@ class Server:
         else:                                                   # Ha már foglalt a szerver
             self.reject_handshake(message)
 
+    # Új session állapot generálása, beállítása
     def create_session(self, message: HandshakeMessage):
         print('Creating new session with client: ' + message.client)
         self.active_client = message.client
@@ -78,12 +100,13 @@ class Server:
         self.session_key = get_random_session_key()
         self.connected_to_client = True
 
+    # érvényes Hanshake NEW üzenet elfogadása
     def accept_handshake(self):
         response = HandshakeMessage(self.active_client, HandshakeMessageTypes.NEW_ACK, get_current_timestamp(), self.session_key)
-        self.networkIF.send_msg(self.active_client, response.to_bytes())
+        self.networkInterface.send_msg(self.active_client, response.to_bytes())
         print('Handshake accepted...')
 
-    # Handles HANDSHAKE messages during Command loop. !!! RETURN VALUE: BOOL --> Break the Command Loop or Not !!!
+    # HANDSHAKE típusú üzenetek kezelése a COMMAND loop alatt. !!! RETURN TYPE: BOOL --> Így lehet kilépni a COMMAND loop-ból FIN üzenet esetén !!!
     def handle_handshake_messages_during_session(self, msg: bytes) -> bool:
         message = HandshakeMessage()
         message.from_bytes(msg)
@@ -99,9 +122,10 @@ class Server:
         else:
             return False    # Ignore
 
+    # Kapcsolat bontása FIN esetén
     def close_session(self):
         fin_ack = HandshakeMessage(self.active_client, HandshakeMessageTypes.FIN_ACK, get_current_timestamp())
-        self.networkIF.send_msg(self.active_client, fin_ack.to_bytes())
+        self.networkInterface.send_msg(self.active_client, fin_ack.to_bytes())
 
         # !!! Implement wait for FIN_ACK
 
@@ -112,6 +136,7 @@ class Server:
     def reject_handshake(self, message: HandshakeMessage):
         print('reject hanshake NOT IMPLEMENTED')
 
+    # check credentials
     def valid_username_and_password(self, payload: str) -> bool:
         print('Username and password validation NOT IMPLEMENTED')
         return True
@@ -133,3 +158,6 @@ class Server:
 
     def importSharedSecret(self, client):
         pass
+
+
+
