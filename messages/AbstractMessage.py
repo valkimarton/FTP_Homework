@@ -25,7 +25,7 @@ class AbstractMessage:
         return self.header_to_bytes() + self.payload
 
     def header_to_bytes(self) -> bytes:
-        return self.id.encode('utf-8') + self.client.encode('utf-8') + self.type.encode('utf-8') + self.len_to_byte() + self.timestamp_to_byte()
+        return self.id.encode('utf-8') + self.client.ljust(3, '0').encode('utf-8') + self.type.encode('utf-8') + self.len_to_byte() + self.timestamp_to_byte()
 
     # bytes üzenetreprezentációból beolvassa a mezőket
     # A leszármazottakban egyszerűbb egyesével implementálni szerintem
