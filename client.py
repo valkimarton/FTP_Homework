@@ -81,7 +81,7 @@ class Client:
         payload = fullCommand[4:]
         if self.payload_is_valid(payload) == True:
             sequence_num = seq_num + 1
-            message = CommandMessage(own_addr, commmand, get_current_timestamp(), payload.encode('utf-8'), sequence_num)
+            message = CommandMessage.CommandMessage(own_addr, commmand, get_current_timestamp(), payload.encode('utf-8'), sequence_num)
             return message
         else: 
             return None

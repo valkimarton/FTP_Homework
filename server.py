@@ -53,7 +53,7 @@ class Server:
                 # Ha COMMAND típúsú üzenet jön
                 elif self.get_message_id(msg) == COMMAND_MESSAGE_ID:
                     print('got a command message')
-                    message = CommandMessage()
+                    message = CommandMessage.CommandMessage()
                     message.from_bytes(msg)
                     message.print()
                     # resMessage = CommandMessage(self.own_address, CommandMessageTypes.MKD, get_current_timestamp(), ('Got a coommand message').encode('utf-8'), 0)
@@ -74,7 +74,7 @@ class Server:
                         path = self.currentDir + '/' + message.payload
                         os.mkdir(path)
                         responseMessage = 'Made a new dir, name: ' + message.payload
-                        resMessage = CommandMessage(self.own_address, CommandMessageTypes.MKD, get_current_timestamp(), responseMessage.encode('utf-8'), 0)
+                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.MKD, get_current_timestamp(), responseMessage.encode('utf-8'), 0)
 
                     ###############################
                     # COMMAND MESSAGE HANDLING HERE
