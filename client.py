@@ -48,15 +48,12 @@ class Client:
                     commandMessage = self.makeMessage(command, self.own_address, self.sequence_number)
                     if commandMessage != None: 
                         self.sequence_number += 1
-                        self.networkInterface.send_msg(self.server_address, commandMessage.to_bytes())
-                        time.sleep(2)
-                        status, rsp = self.networkInterface.receive_msg(blocking=False)
+                        self.networkInterface.send_msg(self.server_address, encrypt_message(commandMessage, self.session_key))
+                        status, rsp = self.networkInterface.receive_msg(blocking=True)
                         if status:
-                            response = CommandMessage()
+                            response = CommandMessage.CommandMessage()
                             response.from_bytes(rsp)
-                            if response.type == CommandMessageTypes.MKD:
-                                print('got a response for command')
-                                response.print()
+                            print(response.payload)
                 ########
                 # Other commands here
                 ########
