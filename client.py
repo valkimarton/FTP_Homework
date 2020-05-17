@@ -5,6 +5,7 @@ from messages.HandshakeMessage import HandshakeMessage
 from messages.FileTransferMessage import FileTransferMessage
 from utils.GeneralUtils import *
 from utils.enums import *
+from utils.CryptoUtils import *
 
 
 class Client:
@@ -13,6 +14,8 @@ class Client:
         self.network_path = network_path
         self.own_address = own_address
         self.networkInterface = network_interface(network_path, own_address)
+
+        self.shared_secret = b'shared_secret_' + own_address.encode('utf-8') + b'_0123456789012345'    # TODO: fájblól beolvasni mint a szervernél...
 
         #########
         # STATE #
@@ -184,21 +187,20 @@ class Client:
         timestamp = get_current_timestamp()
 
         # NEW
-        message = HandshakeMessage(self.own_address, HandshakeMessageTypes.NEW, timestamp, payload)
-        self.networkInterface.send_msg(self.server_address, message.to_bytes())
+        message = HandshakeMessage.HandshakeMessage(self.own_address, HandshakeMessageTypes.NEW, timestamp, payload)
+        self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.shared_secret))
 
         # Handle response
         time.sleep(2)  # REMOVE
         status, rsp = self.networkInterface.receive_msg(blocking=False)
         if status:
-            response = HandshakeMessage()
-            response.from_bytes(rsp)
+            response = decrypt_message(rsp, self.shared_secret) #decrypting response
             if response.type == HandshakeMessageTypes.NEW_ACK:
                 self.create_session(response)
             else:
                 pass
 
-            print('Response (NEW_ACK): ')
+            print('Response (' + response.type + '):')
             response.print()
         else:
             print('No answer arrived in 2 seconds')
@@ -213,15 +215,14 @@ class Client:
     # Kapcsolat bontásának kezdeményezése, válasz kezelése, session lebontása sikeres esetben
     def disconnect_from_server(self):
 
-        message = HandshakeMessage(self.own_address, HandshakeMessageTypes.FIN, get_current_timestamp())
-        self.networkInterface.send_msg(self.server_address, message.to_bytes())
+        message = HandshakeMessage.HandshakeMessage(self.own_address, HandshakeMessageTypes.FIN, get_current_timestamp())
+        self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.shared_secret))
 
         # wait for FIN ACK
         time.sleep(2)
         status, rsp = self.networkInterface.receive_msg(blocking=False)
         if status:
-            response = HandshakeMessage()
-            response.from_bytes(rsp)
+            response = decrypt_message(rsp, self.shared_secret)
             if response.type == HandshakeMessageTypes.FIN_ACK:
                 self.reset_state()
                 print('Session closed (Partially implemented...)')
