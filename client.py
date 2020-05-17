@@ -64,9 +64,10 @@ class Client:
     def upload_file(self):
         print('Not implemented...')
         filename = input('Choose a file to upload: ')
+        payload = filename.encode('utf-8')
         timestamp = get_current_timestamp()
         # Initiate connection
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.NEW_UPL, timestamp, filename)
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.NEW_UPL, timestamp, payload)
         self.networkInterface.send_msg(self.server_address, message.to_bytes())
         time.sleep(2)  # REMOVE
         status, rsp = self.networkInterface.receive_msg(blocking=False)

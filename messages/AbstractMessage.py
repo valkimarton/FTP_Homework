@@ -13,7 +13,7 @@ class AbstractMessage:
         self.id = id
         self.client = client
         self.type = type
-        self.len = len(payload)  # the Message object contains the unencrypted message in bytes -> payload = bytes
+        self.len = int(len(payload) / 16) # the Message object contains the unencrypted message in bytes -> payload = bytes
         self.timestamp = timestamp
         if isinstance(payload, bytes):
             self.payload: bytes = payload

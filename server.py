@@ -4,6 +4,8 @@ from messages.FileTransferMessage import FileTransferMessage
 from utils.GeneralUtils import *
 from utils.enums import *
 from utils.constants import *
+from utils.CryptoUtils import *
+from server_root.database import database
 
 
 class Server:
@@ -128,11 +130,11 @@ class Server:
         # Check integrity: built in GCM
 
         # felhasználónév + jelszó ellenőrzés
-        if not self.valid_username_and_password(message.payload):
+        if not self.is_password_valid(message):
             self.reject_handshake(message)
 
         # ha nincs aktív kliens vagy az aktív kliens küldte újra a handshake-et (nem kapta meg a választ mondjuk)
-        if self.active_client == '' or self.active_client == message.client:
+        elif self.active_client == '' or self.active_client == message.client:
             self.create_session(message)
             self.accept_handshake()
         else:  # Ha már foglalt a szerver
@@ -180,12 +182,21 @@ class Server:
         self.reset_state()
 
     def reject_handshake(self, message: HandshakeMessage):
-        print('reject hanshake NOT IMPLEMENTED')
+        response = HandshakeMessage(message.client, HandshakeMessageTypes.REJ, get_current_timestamp())
+        self.networkInterface.send_msg(message.client, response.to_bytes())
+        print('Handshake rejected...')
 
     # check credentials
-    def valid_username_and_password(self, payload: str) -> bool:
-        print('Username and password validation NOT IMPLEMENTED')
-        return True
+    def is_password_valid(self, message: HandshakeMessage) -> bool:
+        password = message.payload.decode('utf-8')
+        password_hash = get_password_hash(password)
+
+        if password_hash == database[message.client]['password_hash']:
+            print(password_hash)
+            print(database[message.client]['password_hash'])
+            return True
+        else:
+            return False
 
     def get_message_id(self, message: bytes) -> str:
         return message[0:1].decode('utf-8')
