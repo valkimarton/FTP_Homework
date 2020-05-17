@@ -7,7 +7,7 @@ from utils.enums import *
 from utils.constants import *
 from utils.CryptoUtils import *
 from server_root.database import database
-import os
+import os, shutil
 
 
 class Server:
@@ -51,31 +51,80 @@ class Server:
                         msg)  # Ha valid FIN üzenet jön -> kapcsolat bontása
                     if session_ended:
                         break
+
+
                 # Ha COMMAND típúsú üzenet jön
                 elif decryptedMsg.id == COMMAND_MESSAGE_ID:
                     print('got a command message')
                     msgType = decryptedMsg.type
+                    basePath = self.currentDir + '/'
+
                     if msgType == CommandMessageTypes.RMD:
                         print('RMD')
+                        path = basePath + decryptedMsg.payload
+                        resMsg = ''
+                        if not os.path.exists(path) & self.currentDir != path:
+                            resMsg = 'Error. No such directory in folder: ' + self.currentDir
+                        else:
+                            shutil.rmtree(path)
+                            self.currentDir = self.currentDir[0:self.currentDir.rindex('/')]
+                            resMsg = 'Delete a folder: ' + decryptedMsg.payload
+                        
+                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.RMD, get_current_timestamp(), resMsg.encode('utf-8'), 0)
+                        self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+
                     elif msgType == CommandMessageTypes.RMF:
                         print('RMF')
+                        pathWithFile = basePath + decryptedMsg.payload
+                        resMsg = ''
+                        if os.path.isfile(pathWithFile):
+                            os.remove(pathWithFile)
+                            resMsg = 'Removed a file from ' + self.currentDir + '/ ' + decryptedMsg.payload 
+                        else:
+                            resMsg = "Error, file dosen't exist in directory: " + self.currentDir
+                        
+                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.RMF, get_current_timestamp(), resMsg.encode('utf-8'), 0)
+                        self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+
                     elif msgType == CommandMessageTypes.GWD:
                         print('GWD')
+                        resMsg = 'Current directory: ' + self.currentDir
+                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD, get_current_timestamp(), resMsg.encode('utf-8'), 0)
+                        self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+
+
                     elif msgType == CommandMessageTypes.CWD:
                         print('CWD')
+                        changeto = decryptedMsg.payload
+                        goIn = self.currentDir + '/' + changeto
+                        rootDirOfClient = 'server_root/' + self.active_client + '_root'
+                        resMsg = ''
+                        if (changeto == '../') & (self.currentDir != rootDirOfClient):
+                            self.currentDir = self.currentDir[0:self.currentDir.rindex('/')]
+                            resMsg = "changed to: " + self.currentDir
+                        elif os.path.isdir(goIn) & (changeto != '../'):
+                            self.currentDir = goIn
+                            resMsg = "changed to: " + self.currentDir
+                        else:
+                            resMsg = "Folder doesn't exists or can't navigate there"
+
+                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD, get_current_timestamp(), resMsg.encode('utf-8'), 0)
+                        self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+
                     elif msgType == CommandMessageTypes.LST:
                         print('LST')
+                        resMsg = os.listdir(self.currentDir)
+                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD, get_current_timestamp(), ', '.join(resMsg).encode('utf-8'), 0)
+                        self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+
                     elif msgType == CommandMessageTypes.MKD:
                         print('MKD')
-                        path = self.currentDir + '/' + decryptedMsg.payload
+                        path = basePath + decryptedMsg.payload
                         os.mkdir(path)
                         responseMessage = 'Made a new dir, name: ' + decryptedMsg.payload
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.MKD, get_current_timestamp(), responseMessage.encode('utf-8'), 0)
                         self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
 
-                    ###############################
-                    # COMMAND MESSAGE HANDLING HERE
-                    ###############################
                 elif self.get_message_id(msg) == FILE_TRANSFER_MESSAGE_ID:
                     upload = False
                     download = False
