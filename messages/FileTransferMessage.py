@@ -34,3 +34,6 @@ class FileTransferMessage(AbstractMessage):
 
     def get_last(self, bytestring: bytes) -> bool:
         return bool.from_bytes(bytestring[21:22], byteorder='big')
+
+    def get_payload(self, bytestring: bytes) -> str:
+        return

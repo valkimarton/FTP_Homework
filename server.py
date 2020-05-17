@@ -21,8 +21,6 @@ class Server:
         self.active_client = ''
         self.session_key = b''
         self.sequence_number = -1
-        self.upload = False
-        self.download = False
 
     def main_loop(self):
         print('Server main loop started...')
@@ -55,20 +53,23 @@ class Server:
                     # COMMAND MESSAGE HANDLING HERE
                     ###############################
                 elif self.get_message_id(msg) == FILE_TRANSFER_MESSAGE_ID:
+                    upload, download = False
                     if self.get_message_type(msg) == FileTransferMessageTypes.NEW_DNL:
-                        self.download = True
+                        download = True
+                        filename = self.get_message_payload(msg)
+                        print(filename)
                     elif self.get_message_type(msg) == FileTransferMessageTypes.NEW_UPL:
-                        self.upload = True
+                        upload = True
                     else:
                         print('Wrong message type!')
 
-                    if (self.download):
-                        self.init_download()
-                        self.send_file()
+                    if (download):
+                        self.init_download(filename)
+                        self.send_file(filename)
 
-                    elif (self.upload):
-                        self.init_upload()
-                        self.save_file()
+                    elif (upload):
+                        self.init_upload(filename)
+                        self.save_file(filename)
 
                 else:
                     print('Invalid message type')
@@ -83,11 +84,14 @@ class Server:
     # PETI
     ##################
     def get_message_type(self, message: bytes) -> str:
-        return message[0:1].decode('utf-8')
+        return message[4:7].decode('utf-8')
 
-    def init_download(self):
+    def get_message_payload(self, message: bytes) -> str:
+        return message[33:-16].decode('utf-8')
+
+    def init_download(self, filename: str):
         timestamp = get_current_timestamp()
-        payload = ('TODO filename').encode('utf-8')
+        payload = filename.encode('utf-8')
         message = FileTransferMessage(self.own_address, FileTransferMessageTypes.DNL_NEW_ACK, timestamp,
                                       payload, 0)
         self.networkInterface.send_msg(self.active_client, message.to_bytes())
@@ -95,9 +99,9 @@ class Server:
                                       payload, 0)
         self.networkInterface.send_msg(self.active_client, message.to_bytes())
 
-    def init_upload(self):
+    def init_upload(self, filename: str):
         timestamp = get_current_timestamp()
-        payload = ('TODO filename').encode('utf-8')
+        payload = filename.encode('utf-8')
         message = FileTransferMessage(self.own_address, FileTransferMessageTypes.UPL_NEW_ACK, timestamp,
                                       payload, 0)
         self.networkInterface.send_msg(self.active_client, message.to_bytes())
@@ -107,11 +111,72 @@ class Server:
         if message.type == FileTransferMessageTypes.SEND:
             print('SND received')
 
-    def send_file(self):
-        print("send_file not implemented")
+    def send_file(self, filename: str):
+        last = False
+        seq_num = 1
+        while (last == False):
+            timestamp = get_current_timestamp()
+            f = open(filename, 'r')
+            payload = f.read(512).encode('utf-8')
+            if len(payload) <= 512:
+                last = True
+                f.close()
+                payload.ljust(512, '0'.encode('utf-8'))  # padding
+            message = FileTransferMessage(self.own_address, FileTransferMessageTypes.DAT, timestamp,
+                                          payload, seq_num, last)
+            self.networkInterface.send_msg(self.active_client, message.to_bytes())
+            seq_num += 1
+            # Miután elküldött mindent, vár egy FIN-üzenetre, hogy a kliens megkapta-e az utolsó darabot is
+            # Ha megkapja, akkor nyugtázza
+            if last:
+                status, msg = self.networkInterface.receive_msg(blocking=True)
+                message = FileTransferMessage()
+                message.from_bytes(msg)
+                if message.type == FileTransferMessageTypes.FIN:
+                    print('FIN received, closing download...')
+                    self.close_download(filename)
+                    print('Done.')
+                    break
 
-    def save_file(self):
-        print("save_file not implemented")
+    def save_file(self, filename: str):
+        last = False
+        while not last:
+            status, msg = self.networkInterface.receive_msg(blocking=True)
+            message = FileTransferMessage()
+            message.from_bytes(msg)
+            if message.type == FileTransferMessageTypes.DAT:
+                print('DAT received, saving file...')
+                payload = message.payload
+                f = open(filename, 'a')
+                f.write(payload)
+                f.close()
+                if message.last:
+                    last = True
+            else:
+                print('Invalid message type!')
+                break
+            if last:
+                print('Done.')
+                self.close_upload(filename)
+
+    def close_download(self, filename: str):
+        timestamp = get_current_timestamp()
+        payload = filename.encode('utf-8')
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
+                                      payload, 0)
+        self.networkInterface.send_msg(self.active_client, message.to_bytes())
+
+    def close_upload(self, filename: str):
+        timestamp = get_current_timestamp()
+        payload = filename.encode('utf-8')
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.FIN, timestamp,
+                                      payload, 0)
+        self.networkInterface.send_msg(self.active_client, message.to_bytes())
+        status, msg = self.networkInterface.receive_msg(blocking=True)
+        message = FileTransferMessage()
+        message.from_bytes(msg)
+        if message.type == FileTransferMessageTypes.ACK_FIN:
+            print('FIN_ACK received, closing upload...')
 
     ##################
     # MARCI

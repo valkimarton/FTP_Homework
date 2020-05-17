@@ -41,7 +41,7 @@ class AbstractMessage:
 
     # getting CLIENT from bytestring + validation
     def get_valid_client_or_throw(self, bytestring: bytes) -> str:
-        client = bytestring[3:4].decode('utf-8')
+        client = bytestring[1:2].decode('utf-8')
         if client not in CLIENT_SPACE:
             raise Exception('Invalid Client identifier: ' + client)
         return client
