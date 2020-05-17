@@ -43,22 +43,18 @@ class Server:
                 print('Waiting for commands')
 
                 status, msg = self.networkInterface.receive_msg(blocking=True)
+                decryptedMsg = decrypt_message(msg, self.session_key)
 
                 # Ha HANDSHAKE típúsú üzenet jön
-                if self.get_message_id(msg) == HANDSHAKE_MESSAGE_ID:
+                if decryptedMsg.id == HANDSHAKE_MESSAGE_ID:
                     session_ended = self.handle_handshake_messages_during_session(
                         msg)  # Ha valid FIN üzenet jön -> kapcsolat bontása
                     if session_ended:
                         break
                 # Ha COMMAND típúsú üzenet jön
-                elif self.get_message_id(msg) == COMMAND_MESSAGE_ID:
+                elif decryptedMsg.id == COMMAND_MESSAGE_ID:
                     print('got a command message')
-                    message = CommandMessage.CommandMessage()
-                    message.from_bytes(msg)
-                    message.print()
-                    # resMessage = CommandMessage(self.own_address, CommandMessageTypes.MKD, get_current_timestamp(), ('Got a coommand message').encode('utf-8'), 0)
-                    # self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
-                    msgType = self.get_messages_type(msg)
+                    msgType = decryptedMsg.type
                     if msgType == CommandMessageTypes.RMD:
                         print('RMD')
                     elif msgType == CommandMessageTypes.RMF:
@@ -71,10 +67,11 @@ class Server:
                         print('LST')
                     elif msgType == CommandMessageTypes.MKD:
                         print('MKD')
-                        path = self.currentDir + '/' + message.payload
+                        path = self.currentDir + '/' + decryptedMsg.payload
                         os.mkdir(path)
-                        responseMessage = 'Made a new dir, name: ' + message.payload
+                        responseMessage = 'Made a new dir, name: ' + decryptedMsg.payload
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.MKD, get_current_timestamp(), responseMessage.encode('utf-8'), 0)
+                        self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
 
                     ###############################
                     # COMMAND MESSAGE HANDLING HERE

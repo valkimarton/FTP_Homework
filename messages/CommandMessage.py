@@ -35,5 +35,4 @@ class CommandMessage(AbstractMessage):
 
     def get_payload(self, bytestring: bytes) -> str:
         payload = bytestring[20:].decode('utf-8')
-        print(payload)
         return payload
