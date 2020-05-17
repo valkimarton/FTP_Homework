@@ -14,6 +14,6 @@ CLIENT_SPACE = network_interface.addr_space
 #Milyen ID-khoz milyen típúsok tartoznak (Validációhoz)
 TYPE_SPACE = {
     'H': ['NEW', 'NAC', 'REJ', 'FIN', 'FAC'],   # A HandshakeMessage lehetséges TYPE mezői
-    'C': [],
+    'C': ['MKD', 'RMD', 'GWD', 'CWD', 'LST', 'RMF'], # A CommandMessage lehetseges TYPE mezoi
     'F': []
 }

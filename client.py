@@ -4,6 +4,8 @@ from netsim.netinterface import network_interface
 from messages.HandshakeMessage import HandshakeMessage
 from utils.GeneralUtils import *
 from utils.enums import *
+from utils.constants import *
+from utils.CommandProtocol import * 
 
 class Client:
 
@@ -36,8 +38,12 @@ class Client:
 				if command == 'FIN':
 					self.disconnect_from_server()
 					break
-				elif command == 'MKD':
-					print('Not implemented...')
+				elif TYPE_SPACE['C'].index(command[0:3]) > -1:
+					print('Use command protocol')
+					commandMessage = CommandProtocol.makeMessage(command, self.own_address, self.sequence_number)
+					if commandMessage != NONE: 
+						self.sequence_number += 1
+						self.networkInterface.send_msg(commandMessage)
 				########
 				# Other commands here
 				########

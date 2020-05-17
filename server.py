@@ -43,7 +43,7 @@ class Server:
                         break
                 # Ha COMMAND típúsú üzenet jön
                 elif self.get_message_id(msg) == COMMAND_MESSAGE_ID:
-
+                    
                     self.networkInterface.send_msg(self.active_client, b'COMMAND ARRIVED, handling not implemented')
 
                     ###############################
@@ -59,6 +59,8 @@ class Server:
     # NÓRI
     ##################
 
+    def get_messages_type(self, message: bytes) -> str:
+        return message[4:7].decode('utf-8')
 
     ##################
     # PETI
