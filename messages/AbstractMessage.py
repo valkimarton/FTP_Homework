@@ -79,7 +79,7 @@ class AbstractMessage:
     # convert TIMESTAMP to bytestring
     def timestamp_to_byte(self) -> bytes:
         # valiation logic here? (timestamp must be small than 2^80 -1 .... ha csak ez,a kkor azzan ne foglalkozzunk most)
-        return self.timestamp.to_bytes(length=10, byteorder='big')
+        return self.timestamp.to_bytes(length=8, byteorder='big')
 
     # print Message structure
     def print(self):
