@@ -7,8 +7,8 @@ class CommandProtocol:
         commmand = command[0:3]
         payload = command[4:]
         if self.payload_is_valid(payload) == true:
-            sequence_num = seq_num += 1
-            message = new CommandMessage(own_addr, commmand, get_current_timestamp(), payload, sequence_num)
+            sequence_num = seq_num + 1
+            message = CommandMessage(own_addr, commmand, get_current_timestamp(), payload, sequence_num)
             return message
         else: 
             return None

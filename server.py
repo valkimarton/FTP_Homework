@@ -23,6 +23,7 @@ class Server:
         self.sequence_number = -1
         self.upload = False
         self.download = False
+        self.currentDir = ''
 
     def main_loop(self):
         print('Server main loop started...')
@@ -150,6 +151,7 @@ class Server:
         self.sequence_number = 0
         self.session_key = get_random_session_key()
         self.connected_to_client = True
+        self.currentDir = message.client + '_root'
 
     # érvényes Hanshake NEW üzenet elfogadása
     def accept_handshake(self):
@@ -209,6 +211,7 @@ class Server:
         self.active_client = ''
         self.session_key = ''
         self.sequence_number = -1
+        self.currentDir = ''
 
     def print(self):
         print('Address: ' + self.own_address + '\n' + 'Network path: ' + self.network_path)

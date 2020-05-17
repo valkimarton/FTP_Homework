@@ -40,7 +40,7 @@ class Client:
                 if command == 'FIN':
                     self.disconnect_from_server()
                     break
-                 elif TYPE_SPACE['C'].index(command[0:3]) > -1:
+                elif TYPE_SPACE['C'].index(command[0:3]) > -1:
                     print('Use command protocol')
                     commandMessage = CommandProtocol.makeMessage(command, self.own_address, self.sequence_number)
                     if commandMessage != NONE: 
