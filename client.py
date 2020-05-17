@@ -2,10 +2,12 @@ import time
 
 from netsim.netinterface import network_interface
 from messages.HandshakeMessage import HandshakeMessage
+from messages.FileTransferMessage import FileTransferMessage
 from utils.GeneralUtils import *
 from utils.enums import *
 from utils.constants import *
 from utils.CommandProtocol import * 
+
 
 class Client:
 
@@ -38,7 +40,7 @@ class Client:
                 if command == 'FIN':
                     self.disconnect_from_server()
                     break
-                elif TYPE_SPACE['C'].index(command[0:3]) > -1:
+                 elif TYPE_SPACE['C'].index(command[0:3]) > -1:
                     print('Use command protocol')
                     commandMessage = CommandProtocol.makeMessage(command, self.own_address, self.sequence_number)
                     if commandMessage != NONE: 
@@ -47,25 +49,81 @@ class Client:
                 ########
                 # Other commands here
                 ########
+                elif command == 'UPL':
+                    self.init_upload()
+                elif command == 'DNL':
+                    self.init_download()
                 else:
-                    print('Invalid command')
-
+                    print('Invalid command!')
 
             if input('Continue? (y/n): ') == 'n': break
 
         print('Client main loop ended...')
 
-
-
     ##################
     # NÓRI
     ##################
 
-
     ##################
     # PETI
     ##################
+    def init_upload(self):
+        filename = input('Choose a file to upload: ')
+        payload = filename.encode('utf-8')
+        timestamp = get_current_timestamp()
+        # Initiate connection
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.NEW_UPL, timestamp, payload)
+        self.networkInterface.send_msg(self.server_address, message.to_bytes())
+        time.sleep(2)  # REMOVE
+        status, rsp = self.networkInterface.receive_msg(blocking=False)
+        if status:
+            response = FileTransferMessage()
+            response.from_bytes(rsp)
+            if response.type == FileTransferMessageTypes.UPL_NEW_ACK:
+                print('ack arrived')
+            else:
+                pass
+            print('Response (UPL_NEW_ACK): ')
+            response.print()
+        else:
+            print('No answer arrived in 2 seconds')
 
+
+    def init_download(self):
+        print('Not implemented...')
+        filename = input('Choose a file to download: ')
+        payload = filename.encode('utf-8')
+        timestamp = get_current_timestamp()
+        # Initiate connection
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.NEW_DNL, timestamp, payload, 0)
+        self.networkInterface.send_msg(self.server_address, message.to_bytes())
+        time.sleep(2)  # REMOVE
+        # Waiting for response
+        status, rsp = self.networkInterface.receive_msg(blocking=False)
+        if status:
+            response = FileTransferMessage()
+            response.from_bytes(rsp)
+            if response.type == FileTransferMessageTypes.DNL_NEW_ACK:
+                print('DNL_NEW_ACK arrived')
+            else:
+                pass
+            print('Response (DNL_NEW_ACK): ')
+            response.print()
+        else:
+            print('No answer arrived in 2 seconds')
+        # # time.sleep(2)  # REMOVE
+        # status, rsp = self.networkInterface.receive_msg(blocking=False)
+        # if status:
+        #     response = FileTransferMessage()
+        #     response.from_bytes(rsp)
+        #     if response.type == FileTransferMessageTypes.SEND:
+        #         print('SEND arrived')
+        #     else:
+        #         pass
+        #     print('Response (SEND): ')
+        #     response.print()
+        # else:
+        #     print('No answer arrived in 2 seconds')
 
     ##################
     # MARCI
@@ -84,7 +142,7 @@ class Client:
         self.networkInterface.send_msg(self.server_address, message.to_bytes())
 
         # Handle response
-        time.sleep(2) 	# REMOVE
+        time.sleep(2)  # REMOVE
         status, rsp = self.networkInterface.receive_msg(blocking=False)
         if status:
             response = HandshakeMessage()
@@ -150,4 +208,4 @@ class Client:
         print('Not implemented')
 
     def print(self):
-        print('Address: ' + self.own_address + '\n' + 'Network path: ' +  self.network_path)
+        print('Address: ' + self.own_address + '\n' + 'Network path: ' + self.network_path)

@@ -13,7 +13,7 @@ class AbstractMessage:
         self.id = id
         self.client = client
         self.type = type
-        self.len = len(payload)  # the Message object contains the unencrypted message in bytes -> payload = bytes
+        self.len = int(len(payload) / 16) # the Message object contains the unencrypted message in bytes -> payload = bytes
         self.timestamp = timestamp
         if isinstance(payload, bytes):
             self.payload: bytes = payload
@@ -41,25 +41,25 @@ class AbstractMessage:
 
     # getting CLIENT from bytestring + validation
     def get_valid_client_or_throw(self, bytestring: bytes) -> str:
-        client = bytestring[1:2].decode('utf-8')
+        client = bytestring[3:4].decode('utf-8')
         if client not in CLIENT_SPACE:
             raise Exception('Invalid Client identifier: ' + client)
         return client
 
     # getting TYPE from bytestring + validation
     def get_valid_type_or_throw(self, bytestring: bytes, message_id: str) -> str:
-        type = bytestring[2:5].decode('utf-8')
+        type = bytestring[4:7].decode('utf-8')
         if type not in TYPE_SPACE[message_id]:
             raise Exception('Invalid type field: ' + type + 'for message id: ' + message_id)
         return type
 
     # getting LEN from bytestring
     def get_len(self, bytestring: bytes) -> int:
-        return int.from_bytes(bytestring[5:6], byteorder='big')
+        return int.from_bytes(bytestring[7:8], byteorder='big')
 
     # getting TIMESTAMP from bytestring + validation
     def get_valid_timestamp_or_throw(self, bytestring: bytes) -> int:
-        timestamp = int.from_bytes(bytestring[6:16], byteorder='big')
+        timestamp = int.from_bytes(bytestring[8:16], byteorder='big')
         if timestamp > get_current_timestamp():
             raise Exception('message timestamp is bigger than current time')
         # if timestamp < get_random_session_key() - 30:         TODO

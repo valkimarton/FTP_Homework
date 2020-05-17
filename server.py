@@ -1,8 +1,11 @@
 from netsim.netinterface import network_interface
 from messages.HandshakeMessage import HandshakeMessage
+from messages.FileTransferMessage import FileTransferMessage
 from utils.GeneralUtils import *
 from utils.enums import *
 from utils.constants import *
+from utils.CryptoUtils import *
+from server_root.database import database
 
 
 class Server:
@@ -11,7 +14,6 @@ class Server:
         self.own_address = own_address
         self.networkInterface = network_interface(network_path, own_address)
 
-
         #########
         # STATE #
         #########
@@ -19,6 +21,8 @@ class Server:
         self.active_client = ''
         self.session_key = b''
         self.sequence_number = -1
+        self.upload = False
+        self.download = False
 
     def main_loop(self):
         print('Server main loop started...')
@@ -38,7 +42,8 @@ class Server:
 
                 # Ha HANDSHAKE típúsú üzenet jön
                 if self.get_message_id(msg) == HANDSHAKE_MESSAGE_ID:
-                    session_ended = self.handle_handshake_messages_during_session(msg)  # Ha valid FIN üzenet jön -> kapcsolat bontása
+                    session_ended = self.handle_handshake_messages_during_session(
+                        msg)  # Ha valid FIN üzenet jön -> kapcsolat bontása
                     if session_ended:
                         break
                 # Ha COMMAND típúsú üzenet jön
@@ -49,6 +54,21 @@ class Server:
                     ###############################
                     # COMMAND MESSAGE HANDLING HERE
                     ###############################
+                elif self.get_message_id(msg) == FILE_TRANSFER_MESSAGE_ID:
+                    if self.get_message_type(msg) == FileTransferMessageTypes.NEW_DNL:
+                        self.download = True
+                    elif self.get_message_type(msg) == FileTransferMessageTypes.NEW_UPL:
+                        self.upload = True
+                    else:
+                        print('Wrong message type!')
+
+                    if (self.download):
+                        self.init_download()
+                        self.send_file()
+
+                    elif (self.upload):
+                        self.init_upload()
+                        self.save_file()
 
                 else:
                     print('Invalid message type')
@@ -65,7 +85,36 @@ class Server:
     ##################
     # PETI
     ##################
+    def get_message_type(self, message: bytes) -> str:
+        return message[0:1].decode('utf-8')
 
+    def init_download(self):
+        timestamp = get_current_timestamp()
+        payload = ('TODO filename').encode('utf-8')
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.DNL_NEW_ACK, timestamp,
+                                      payload, 0)
+        self.networkInterface.send_msg(self.active_client, message.to_bytes())
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.SEND, timestamp,
+                                      payload, 0)
+        self.networkInterface.send_msg(self.active_client, message.to_bytes())
+
+    def init_upload(self):
+        timestamp = get_current_timestamp()
+        payload = ('TODO filename').encode('utf-8')
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.UPL_NEW_ACK, timestamp,
+                                      payload, 0)
+        self.networkInterface.send_msg(self.active_client, message.to_bytes())
+        status, msg = self.networkInterface.receive_msg(blocking=True)
+        message = FileTransferMessage()
+        message.from_bytes(msg)
+        if message.type == FileTransferMessageTypes.SEND:
+            print('SND received')
+
+    def send_file(self):
+        print("send_file not implemented")
+
+    def save_file(self):
+        print("save_file not implemented")
 
     ##################
     # MARCI
@@ -84,14 +133,14 @@ class Server:
         # Check integrity: built in GCM
 
         # felhasználónév + jelszó ellenőrzés
-        if not self.valid_username_and_password(message.payload):
+        if not self.is_password_valid(message):
             self.reject_handshake(message)
 
         # ha nincs aktív kliens vagy az aktív kliens küldte újra a handshake-et (nem kapta meg a választ mondjuk)
-        if self.active_client == '' or self.active_client == message.client:
+        elif self.active_client == '' or self.active_client == message.client:
             self.create_session(message)
             self.accept_handshake()
-        else:                                                   # Ha már foglalt a szerver
+        else:  # Ha már foglalt a szerver
             self.reject_handshake(message)
 
     # Új session állapot generálása, beállítása
@@ -104,7 +153,8 @@ class Server:
 
     # érvényes Hanshake NEW üzenet elfogadása
     def accept_handshake(self):
-        response = HandshakeMessage(self.active_client, HandshakeMessageTypes.NEW_ACK, get_current_timestamp(), self.session_key)
+        response = HandshakeMessage(self.active_client, HandshakeMessageTypes.NEW_ACK, get_current_timestamp(),
+                                    self.session_key)
         self.networkInterface.send_msg(self.active_client, response.to_bytes())
         print('Handshake accepted...')
 
@@ -122,7 +172,7 @@ class Server:
             self.reject_handshake(message)
             return False
         else:
-            return False    # Ignore
+            return False  # Ignore
 
     # Kapcsolat bontása FIN esetén
     def close_session(self):
@@ -134,14 +184,22 @@ class Server:
         print('Session closed with client: ' + self.active_client)
         self.reset_state()
 
-
     def reject_handshake(self, message: HandshakeMessage):
-        print('reject hanshake NOT IMPLEMENTED')
+        response = HandshakeMessage(message.client, HandshakeMessageTypes.REJ, get_current_timestamp())
+        self.networkInterface.send_msg(message.client, response.to_bytes())
+        print('Handshake rejected...')
 
     # check credentials
-    def valid_username_and_password(self, payload: str) -> bool:
-        print('Username and password validation NOT IMPLEMENTED')
-        return True
+    def is_password_valid(self, message: HandshakeMessage) -> bool:
+        password = message.payload.decode('utf-8')
+        password_hash = get_password_hash(password)
+
+        if password_hash == database[message.client]['password_hash']:
+            print(password_hash)
+            print(database[message.client]['password_hash'])
+            return True
+        else:
+            return False
 
     def get_message_id(self, message: bytes) -> str:
         return message[0:1].decode('utf-8')
@@ -160,6 +218,3 @@ class Server:
 
     def importSharedSecret(self, client):
         pass
-
-
-
