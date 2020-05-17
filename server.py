@@ -63,11 +63,10 @@ class Server:
                         print('RMD')
                         path = basePath + decryptedMsg.payload
                         resMsg = ''
-                        if not os.path.exists(path) & self.currentDir != path:
+                        if not os.path.exists(path) & (self.currentDir != path):
                             resMsg = 'Error. No such directory in folder: ' + self.currentDir
                         else:
                             shutil.rmtree(path)
-                            self.currentDir = self.currentDir[0:self.currentDir.rindex('/')]
                             resMsg = 'Delete a folder: ' + decryptedMsg.payload
                         
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.RMD, get_current_timestamp(), resMsg.encode('utf-8'), 0)
