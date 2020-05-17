@@ -3,10 +3,10 @@ import time
 from netsim.netinterface import network_interface
 from messages.HandshakeMessage import HandshakeMessage
 from messages.FileTransferMessage import FileTransferMessage
+from messages.CommandMessage import CommandMessage
 from utils.GeneralUtils import *
 from utils.enums import *
 from utils.constants import *
-from utils.CommandProtocol import * 
 
 
 class Client:
@@ -40,15 +40,24 @@ class Client:
                 if command == 'FIN':
                     self.disconnect_from_server()
                     break
-                elif TYPE_SPACE['C'].index(command[0:3]) > -1:
+                elif command[0:3] in TYPE_SPACE['C']:
                     print('Use command protocol')
-                    commandMessage = CommandProtocol.makeMessage(command, self.own_address, self.sequence_number)
-                    if commandMessage != NONE: 
+                    commandMessage = self.makeMessage(command, self.own_address, self.sequence_number)
+                    if commandMessage != None: 
                         self.sequence_number += 1
-                        self.networkInterface.send_msg(commandMessage)
+                        self.networkInterface.send_msg(self.server_address, commandMessage.to_bytes())
+                        time.sleep(2)
+                        status, rsp = self.networkInterface.receive_msg(blocking=False)
+                        if status:
+                            response = CommandMessage()
+                            response.from_bytes(rsp)
+                            if response.type == CommandMessageTypes.MKD:
+                                print('got a response for command')
+                                response.print()
                 ########
                 # Other commands here
                 ########
+
                 elif command == 'UPL':
                     self.init_upload()
                 elif command == 'DNL':
@@ -63,6 +72,23 @@ class Client:
     ##################
     # NÓRI
     ##################
+
+    def makeMessage(self, fullCommand: str, own_addr: str, seq_num: int) -> CommandMessage:
+        commmand = fullCommand[0:3]
+        payload = fullCommand[4:]
+        if self.payload_is_valid(payload) == True:
+            sequence_num = seq_num + 1
+            message = CommandMessage(own_addr, commmand, get_current_timestamp(), payload.encode('utf-8'), sequence_num)
+            return message
+        else: 
+            return None
+
+    def payload_is_valid(self, payload: str) -> bool: # bad file or foldername format exception?
+        if len(payload.split()) > 1:
+            raise Exception('Bad file or folder format, use just one word')
+        else:
+            return True
+
 
     ##################
     # PETI

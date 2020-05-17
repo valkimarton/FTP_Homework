@@ -1,11 +1,13 @@
 from netsim.netinterface import network_interface
 from messages.HandshakeMessage import HandshakeMessage
 from messages.FileTransferMessage import FileTransferMessage
+from messages.CommandMessage import CommandMessage
 from utils.GeneralUtils import *
 from utils.enums import *
 from utils.constants import *
 from utils.CryptoUtils import *
 from server_root.database import database
+import os
 
 
 class Server:
@@ -49,8 +51,29 @@ class Server:
                         break
                 # Ha COMMAND típúsú üzenet jön
                 elif self.get_message_id(msg) == COMMAND_MESSAGE_ID:
-                    
-                    self.networkInterface.send_msg(self.active_client, b'COMMAND ARRIVED, handling not implemented')
+                    print('got a command message')
+                    message = CommandMessage()
+                    message.from_bytes(msg)
+                    message.print()
+                    # resMessage = CommandMessage(self.own_address, CommandMessageTypes.MKD, get_current_timestamp(), ('Got a coommand message').encode('utf-8'), 0)
+                    # self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+                    msgType = self.get_messages_type(msg)
+                    if msgType == CommandMessageTypes.RMD:
+                        print('RMD')
+                    elif msgType == CommandMessageTypes.RMF:
+                        print('RMF')
+                    elif msgType == CommandMessageTypes.GWD:
+                        print('GWD')
+                    elif msgType == CommandMessageTypes.CWD:
+                        print('CWD')
+                    elif msgType == CommandMessageTypes.LST:
+                        print('LST')
+                    elif msgType == CommandMessageTypes.MKD:
+                        print('MKD')
+                        path = self.currentDir + '/' + message.payload
+                        os.mkdir(path)
+                        responseMessage = 'Made a new dir, name: ' + message.payload
+                        resMessage = CommandMessage(self.own_address, CommandMessageTypes.MKD, get_current_timestamp(), responseMessage.encode('utf-8'), 0)
 
                     ###############################
                     # COMMAND MESSAGE HANDLING HERE
@@ -82,6 +105,9 @@ class Server:
 
     def get_messages_type(self, message: bytes) -> str:
         return message[4:7].decode('utf-8')
+
+    def executeCommand():
+        return 0
 
     ##################
     # PETI
@@ -151,7 +177,7 @@ class Server:
         self.sequence_number = 0
         self.session_key = get_random_session_key()
         self.connected_to_client = True
-        self.currentDir = message.client + '_root'
+        self.currentDir = 'server_root/' + message.client + '_root'
 
     # érvényes Hanshake NEW üzenet elfogadása
     def accept_handshake(self):
