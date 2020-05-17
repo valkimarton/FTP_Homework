@@ -14,12 +14,15 @@ class Server:
         self.own_address = own_address
         self.networkInterface = network_interface(network_path, own_address)
 
+        self.secret_encryption_key = 'secret_encryption_key'
+
         #########
         # STATE #
         #########
         self.connected_to_client = False
         self.active_client = ''
         self.session_key = b''
+        self.shared_secret = b''
         self.sequence_number = -1
         self.upload = False
         self.download = False
@@ -122,12 +125,8 @@ class Server:
         print('Handling a handshake request...')
 
         status, msg = self.networkInterface.receive_msg(blocking=True)
-        message = HandshakeMessage()
-        message.from_bytes(msg)
-
+        message = decrypt_message(msg, get_shared_secret_by_client(msg[1:2].decode('utf-8'), self.secret_encryption_key)) # még nincs beállítva a self.shared_secret
         message.print()
-
-        # Check integrity: built in GCM
 
         # felhasználónév + jelszó ellenőrzés
         if not self.is_password_valid(message):
@@ -143,6 +142,8 @@ class Server:
     # Új session állapot generálása, beállítása
     def create_session(self, message: HandshakeMessage):
         print('Creating new session with client: ' + message.client)
+
+        self.shared_secret = get_shared_secret_by_client(message.client, self.secret_encryption_key)
         self.active_client = message.client
         self.sequence_number = 0
         self.session_key = get_random_session_key()
@@ -150,15 +151,14 @@ class Server:
 
     # érvényes Hanshake NEW üzenet elfogadása
     def accept_handshake(self):
-        response = HandshakeMessage(self.active_client, HandshakeMessageTypes.NEW_ACK, get_current_timestamp(),
+        response = HandshakeMessage.HandshakeMessage(self.active_client, HandshakeMessageTypes.NEW_ACK, get_current_timestamp(),
                                     self.session_key)
-        self.networkInterface.send_msg(self.active_client, response.to_bytes())
+        self.networkInterface.send_msg(self.active_client, encrypt_message(response, self.shared_secret))
         print('Handshake accepted...')
 
     # HANDSHAKE típusú üzenetek kezelése a COMMAND loop alatt. !!! RETURN TYPE: BOOL --> Így lehet kilépni a COMMAND loop-ból FIN üzenet esetén !!!
     def handle_handshake_messages_during_session(self, msg: bytes) -> bool:
-        message = HandshakeMessage()
-        message.from_bytes(msg)
+        message = decrypt_message(msg, self.shared_secret)
         if message.type == HandshakeMessageTypes.FIN and message.client == self.active_client:
             self.close_session()
             return True
@@ -174,7 +174,7 @@ class Server:
     # Kapcsolat bontása FIN esetén
     def close_session(self):
         fin_ack = HandshakeMessage(self.active_client, HandshakeMessageTypes.FIN_ACK, get_current_timestamp())
-        self.networkInterface.send_msg(self.active_client, fin_ack.to_bytes())
+        self.networkInterface.send_msg(self.active_client, encrypt_message(fin_ack, self.shared_secret))
 
         # !!! Implement wait for FIN_ACK
 
@@ -183,7 +183,7 @@ class Server:
 
     def reject_handshake(self, message: HandshakeMessage):
         response = HandshakeMessage(message.client, HandshakeMessageTypes.REJ, get_current_timestamp())
-        self.networkInterface.send_msg(message.client, response.to_bytes())
+        self.networkInterface.send_msg(message.client, encrypt_message(response, get_shared_secret_by_client(message.client, self.secret_encryption_key)))  # még nincs beállítva a self.shared_secret
         print('Handshake rejected...')
 
     # check credentials
@@ -202,10 +202,13 @@ class Server:
         return message[0:1].decode('utf-8')
 
     def reset_state(self):
+        self.shared_secret = b''
         self.connected_to_client = False
         self.active_client = ''
         self.session_key = ''
         self.sequence_number = -1
+        self.upload = False
+        self.download = False
 
     def print(self):
         print('Address: ' + self.own_address + '\n' + 'Network path: ' + self.network_path)
