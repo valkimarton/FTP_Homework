@@ -1,3 +1,4 @@
 .idea/
 network/
 __pycache__/
+netsim/__pycache__/
