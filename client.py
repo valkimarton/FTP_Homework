@@ -6,6 +6,7 @@ from messages.FileTransferMessage import FileTransferMessage
 from messages.CommandMessage import CommandMessage
 from utils.GeneralUtils import *
 from utils.enums import *
+from utils.CryptoUtils import *
 from utils.constants import *
 
 
@@ -15,6 +16,8 @@ class Client:
         self.network_path = network_path
         self.own_address = own_address
         self.networkInterface = network_interface(network_path, own_address)
+
+        self.shared_secret = b'shared_secret_' + own_address.encode('utf-8') + b'_0123456789012345'    # TODO: fájblól beolvasni mint a szervernél...
 
         #########
         # STATE #
@@ -59,9 +62,9 @@ class Client:
                 ########
 
                 elif command == 'UPL':
-                    self.init_upload()
+                    self.upload()
                 elif command == 'DNL':
-                    self.init_download()
+                    self.download()
                 else:
                     print('Invalid command!')
 
@@ -93,30 +96,61 @@ class Client:
     ##################
     # PETI
     ##################
-    def init_upload(self):
+    def upload(self):
         filename = input('Choose a file to upload: ')
         payload = filename.encode('utf-8')
         timestamp = get_current_timestamp()
         # Initiate connection
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.NEW_UPL, timestamp, payload)
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.NEW_UPL, timestamp, payload, 0)
         self.networkInterface.send_msg(self.server_address, message.to_bytes())
         time.sleep(2)  # REMOVE
-        status, rsp = self.networkInterface.receive_msg(blocking=False)
+        status, rsp = self.networkInterface.receive_msg(blocking=True)
         if status:
             response = FileTransferMessage()
             response.from_bytes(rsp)
+            # Ha kapott ACK-t, akkor küld egy SEND-et, majd az adatokat
             if response.type == FileTransferMessageTypes.UPL_NEW_ACK:
-                print('ack arrived')
+                print('Response (UPL_NEW_ACK): ')
+                response.print()
+                print('Sending SEND')
+                timestamp = get_current_timestamp()
+                message = FileTransferMessage(self.own_address, FileTransferMessageTypes.SEND, timestamp, payload, 0)
+                self.networkInterface.send_msg(self.server_address, message.to_bytes())
+                print('Uploading file...')
+                self.send_file(filename)
             else:
-                pass
-            print('Response (UPL_NEW_ACK): ')
-            response.print()
+                print('Wrong message type!')
         else:
             print('No answer arrived in 2 seconds')
 
+    def send_file(self, filename: str):
+        last = False
+        seq_num = 1
+        while not last:
+            timestamp = get_current_timestamp()
+            f = open(filename, 'r')
+            payload = f.read(512).encode('utf-8')
+            if len(payload) <= 512:
+                last = True
+                f.close()
+                payload.ljust(512, '0'.encode('utf-8'))  # padding
+            message = FileTransferMessage(self.own_address, FileTransferMessageTypes.DAT, timestamp,
+                                          payload, seq_num, last)
+            self.networkInterface.send_msg(self.server_address, message.to_bytes())
+            seq_num += 1
+            # Miután elküldött mindent, vár egy FIN-üzenetre, hogy a szerver megkapta-e az utolsó darabot is
+            # Ha megkapja, akkor nyugtázza
+            if last:
+                status, msg = self.networkInterface.receive_msg(blocking=True)
+                message = FileTransferMessage()
+                message.from_bytes(msg)
+                if message.type == FileTransferMessageTypes.FIN:
+                    print('FIN received, uploading finished.')
+                    self.close_upload(filename)
+                    print('Upload successful.')
+                    break
 
-    def init_download(self):
-        print('Not implemented...')
+    def download(self):
         filename = input('Choose a file to download: ')
         payload = filename.encode('utf-8')
         timestamp = get_current_timestamp()
@@ -125,31 +159,52 @@ class Client:
         self.networkInterface.send_msg(self.server_address, message.to_bytes())
         time.sleep(2)  # REMOVE
         # Waiting for response
-        status, rsp = self.networkInterface.receive_msg(blocking=False)
+        status, rsp = self.networkInterface.receive_msg(blocking=True)
         if status:
             response = FileTransferMessage()
             response.from_bytes(rsp)
             if response.type == FileTransferMessageTypes.DNL_NEW_ACK:
                 print('DNL_NEW_ACK arrived')
+                status, rsp = self.networkInterface.receive_msg(blocking=True)
+                if status:
+                    response = FileTransferMessage()
+                    response.from_bytes(rsp)
+                    print('Response (DNL_NEW_ACK): ')
+                    response.print()
+                    if response.type == FileTransferMessageTypes.SEND:
+                        self.save_file(filename)
             else:
-                pass
-            print('Response (DNL_NEW_ACK): ')
-            response.print()
+                print('Wrong message type!')
         else:
             print('No answer arrived in 2 seconds')
-        # # time.sleep(2)  # REMOVE
-        # status, rsp = self.networkInterface.receive_msg(blocking=False)
-        # if status:
-        #     response = FileTransferMessage()
-        #     response.from_bytes(rsp)
-        #     if response.type == FileTransferMessageTypes.SEND:
-        #         print('SEND arrived')
-        #     else:
-        #         pass
-        #     print('Response (SEND): ')
-        #     response.print()
-        # else:
-        #     print('No answer arrived in 2 seconds')
+
+    def close_upload(self, filename: str):
+        timestamp = get_current_timestamp()
+        payload = filename.encode('utf-8')
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
+                                      payload, 0)
+        self.networkInterface.send_msg(self.server_address, message.to_bytes())
+
+    def save_file(self, filename: str):
+        last = False
+        while not last:
+            status, msg = self.networkInterface.receive_msg(blocking=True)
+            message = FileTransferMessage()
+            message.from_bytes(msg)
+            if message.type == FileTransferMessageTypes.DAT:
+                print('DAT received, saving file...')
+                payload = message.payload
+                f = open(filename, 'a')
+                f.write(payload)
+                f.close()
+                if message.last:
+                    last = True
+            else:
+                print('Invalid message type!')
+                break
+            if last:
+                print('Done.')
+                self.close_upload(filename)
 
     ##################
     # MARCI
@@ -164,21 +219,20 @@ class Client:
         timestamp = get_current_timestamp()
 
         # NEW
-        message = HandshakeMessage(self.own_address, HandshakeMessageTypes.NEW, timestamp, payload)
-        self.networkInterface.send_msg(self.server_address, message.to_bytes())
+        message = HandshakeMessage.HandshakeMessage(self.own_address, HandshakeMessageTypes.NEW, timestamp, payload)
+        self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.shared_secret))
 
         # Handle response
         time.sleep(2)  # REMOVE
         status, rsp = self.networkInterface.receive_msg(blocking=False)
         if status:
-            response = HandshakeMessage()
-            response.from_bytes(rsp)
+            response = decrypt_message(rsp, self.shared_secret) #decrypting response
             if response.type == HandshakeMessageTypes.NEW_ACK:
                 self.create_session(response)
             else:
                 pass
 
-            print('Response (NEW_ACK): ')
+            print('Response (' + response.type + '):')
             response.print()
         else:
             print('No answer arrived in 2 seconds')
@@ -193,15 +247,14 @@ class Client:
     # Kapcsolat bontásának kezdeményezése, válasz kezelése, session lebontása sikeres esetben
     def disconnect_from_server(self):
 
-        message = HandshakeMessage(self.own_address, HandshakeMessageTypes.FIN, get_current_timestamp())
-        self.networkInterface.send_msg(self.server_address, message.to_bytes())
+        message = HandshakeMessage.HandshakeMessage(self.own_address, HandshakeMessageTypes.FIN, get_current_timestamp())
+        self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.shared_secret))
 
         # wait for FIN ACK
         time.sleep(2)
         status, rsp = self.networkInterface.receive_msg(blocking=False)
         if status:
-            response = HandshakeMessage()
-            response.from_bytes(rsp)
+            response = decrypt_message(rsp, self.shared_secret)
             if response.type == HandshakeMessageTypes.FIN_ACK:
                 self.reset_state()
                 print('Session closed (Partially implemented...)')

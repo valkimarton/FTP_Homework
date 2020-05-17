@@ -1,4 +1,4 @@
-from .AbstractMessage import AbstractMessage
+from messages.AbstractMessage import AbstractMessage
 from utils.constants import *
 
 
