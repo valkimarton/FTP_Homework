@@ -25,7 +25,7 @@ class AbstractMessage:
         return self.header_to_bytes() + self.payload
 
     def header_to_bytes(self) -> bytes:
-        return self.id.encode('utf-8') + self.client.encode('utf-8') + self.type.encode('utf-8') + self.len_to_byte() + self.timestamp_to_byte()
+        return self.id.encode('utf-8') + self.client.ljust(3, '0').encode('utf-8') + self.type.encode('utf-8') + self.len_to_byte() + self.timestamp_to_byte()
 
     # bytes üzenetreprezentációból beolvassa a mezőket
     # A leszármazottakban egyszerűbb egyesével implementálni szerintem
@@ -79,7 +79,7 @@ class AbstractMessage:
     # convert TIMESTAMP to bytestring
     def timestamp_to_byte(self) -> bytes:
         # valiation logic here? (timestamp must be small than 2^80 -1 .... ha csak ez,a kkor azzan ne foglalkozzunk most)
-        return self.timestamp.to_bytes(length=10, byteorder='big')
+        return self.timestamp.to_bytes(length=8, byteorder='big')
 
     # print Message structure
     def print(self):
