@@ -55,9 +55,9 @@ class Server:
                     # COMMAND MESSAGE HANDLING HERE
                     ###############################
                 elif self.get_message_id(msg) == FILE_TRANSFER_MESSAGE_ID:
-                    if FileTransferMessage.get_valid_type_or_throw(msg) == FileTransferMessageTypes.NEW_DNL:
+                    if self.get_message_type(msg) == FileTransferMessageTypes.NEW_DNL:
                         self.download = True
-                    elif slef.get_message_type(msg) == FileTransferMessageTypes.NEW_UPL:
+                    elif self.get_message_type(msg) == FileTransferMessageTypes.NEW_UPL:
                         self.upload = True
                     else:
                         print('Wrong message type!')

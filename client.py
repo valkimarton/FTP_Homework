@@ -44,9 +44,9 @@ class Client:
                 # Other commands here
                 ########
                 elif command == 'UPL':
-                    self.upload_file()
+                    self.init_upload()
                 elif command == 'DNL':
-                    self.download_file()
+                    self.init_download()
                 else:
                     print('Invalid command!')
 
@@ -61,8 +61,7 @@ class Client:
     ##################
     # PETI
     ##################
-    def upload_file(self):
-        print('Not implemented...')
+    def init_upload(self):
         filename = input('Choose a file to upload: ')
         payload = filename.encode('utf-8')
         timestamp = get_current_timestamp()
@@ -83,7 +82,8 @@ class Client:
         else:
             print('No answer arrived in 2 seconds')
 
-    def download_file(self):
+
+    def init_download(self):
         print('Not implemented...')
         filename = input('Choose a file to download: ')
         payload = filename.encode('utf-8')
@@ -91,7 +91,7 @@ class Client:
         # Initiate connection
         message = FileTransferMessage(self.own_address, FileTransferMessageTypes.NEW_DNL, timestamp, payload, 0)
         self.networkInterface.send_msg(self.server_address, message.to_bytes())
-        # time.sleep(2)  # REMOVE
+        time.sleep(2)  # REMOVE
         # Waiting for response
         status, rsp = self.networkInterface.receive_msg(blocking=False)
         if status:
