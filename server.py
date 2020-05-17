@@ -241,7 +241,7 @@ class Server:
 
     # Kapcsolat bontása FIN esetén
     def close_session(self):
-        fin_ack = HandshakeMessage(self.active_client, HandshakeMessageTypes.FIN_ACK, get_current_timestamp())
+        fin_ack = HandshakeMessage.HandshakeMessage(self.active_client, HandshakeMessageTypes.FIN_ACK, get_current_timestamp())
         self.networkInterface.send_msg(self.active_client, encrypt_message(fin_ack, self.shared_secret))
 
         # !!! Implement wait for FIN_ACK
@@ -250,7 +250,7 @@ class Server:
         self.reset_state()
 
     def reject_handshake(self, message: HandshakeMessage):
-        response = HandshakeMessage(message.client, HandshakeMessageTypes.REJ, get_current_timestamp())
+        response = HandshakeMessage.HandshakeMessage(message.client, HandshakeMessageTypes.REJ, get_current_timestamp())
         self.networkInterface.send_msg(message.client, encrypt_message(response, get_shared_secret_by_client(message.client, self.secret_encryption_key)))  # még nincs beállítva a self.shared_secret
         print('Handshake rejected...')
 
