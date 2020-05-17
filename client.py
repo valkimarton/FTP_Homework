@@ -85,13 +85,14 @@ class Client:
 			response.from_bytes(rsp)
 			if response.type == HandshakeMessageTypes.NEW_ACK:
 				self.create_session(response)
+			elif response.type == HandshakeMessageTypes.REJ:
+				print('Connection request REJECTED')
 			else:
-				pass
+				print('Message with unanticipated type arrived:')
 
-			print('Response (NEW_ACK): ')
 			response.print()
 		else:
-			print('No answer arrived in 2 seconds')
+			print('No Answer arrived from the Server')
 
 	# Session state beállítása
 	def create_session(self, response: HandshakeMessage):
