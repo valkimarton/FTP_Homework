@@ -264,26 +264,22 @@ class Client:
         self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.shared_secret))
 
         # Handle response
-        time.sleep(2)  # REMOVE
-        status, rsp = self.networkInterface.receive_msg(blocking=False)
-        if status:
-            response = decrypt_message(rsp, self.shared_secret)  # decrypting response
-            if response.type == HandshakeMessageTypes.NEW_ACK:
-                self.create_session(response)
-            else:
-                pass
-
-            print('Response (' + response.type + '):')
-            response.print()
+        status, rsp = self.networkInterface.receive_msg(blocking=True)
+        response = decrypt_message(rsp, self.shared_secret)  # decrypting response
+        if response.type == HandshakeMessageTypes.NEW_ACK:
+            self.create_session(response)
         else:
-            print('No answer arrived in 2 seconds')
+            pass
+
+        print('Response (' + response.type + '):')
+        response.print()
 
     # Session state beállítása
     def create_session(self, response: HandshakeMessage):
         self.session_key = response.payload
         self.sequence_number = 0
         self.connected_to_server = True
-        print('Session created with server: ' + self.server_address + ', shared secret: ', self.session_key)
+        print('Session created with server: ' + self.server_address)
 
     # Kapcsolat bontásának kezdeményezése, válasz kezelése, session lebontása sikeres esetben
     def disconnect_from_server(self):
@@ -293,17 +289,13 @@ class Client:
         self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.shared_secret))
 
         # wait for FIN ACK
-        time.sleep(2)
-        status, rsp = self.networkInterface.receive_msg(blocking=False)
-        if status:
-            response = decrypt_message(rsp, self.shared_secret)
-            if response.type == HandshakeMessageTypes.FIN_ACK:
-                self.reset_state()
-                print('Session closed (Partially implemented...)')
-            else:
-                print('Anticipated FIN_ACK, but got something else...')
+        status, rsp = self.networkInterface.receive_msg(blocking=True)
+        response = decrypt_message(rsp, self.shared_secret)
+        if response.type == HandshakeMessageTypes.FIN_ACK:
+            self.reset_state()
+            print('Session closed (Partially implemented...)')
         else:
-            print('No response arrived to FIN')
+            print('Anticipated FIN_ACK, but got something else...')
 
         '''
         Handshake process incomplete

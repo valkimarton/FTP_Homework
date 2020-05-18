@@ -62,8 +62,8 @@ class AbstractMessage:
         timestamp = int.from_bytes(bytestring[8:16], byteorder='big')
         if timestamp > get_current_timestamp():
             raise Exception('message timestamp is bigger than current time')
-        # if timestamp < get_random_session_key() - 30:         TODO
-        #     raise Exception('message timestamp is too old')
+        if timestamp < get_current_timestamp() - 30:
+            raise Exception('message timestamp is too old')
         return timestamp
 
     # getting DATA/PAYLOAD from bytestring

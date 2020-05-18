@@ -380,8 +380,6 @@ class Server:
         password_hash = get_password_hash(password)
 
         if password_hash == database[message.client]['password_hash']:
-            print(password_hash)
-            print(database[message.client]['password_hash'])
             return True
         else:
             return False
