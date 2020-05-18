@@ -136,10 +136,10 @@ class Server:
                     download = False
                     if decryptedMsg.type == FileTransferMessageTypes.NEW_DNL:
                         download = True
-                        filename = decryptedMsg.payload.decode('utf-8')
+                        filename = decryptedMsg.payload
                     elif decryptedMsg.type == FileTransferMessageTypes.NEW_UPL:
                         download = False
-                        filename = decryptedMsg.payload.decode('utf-8')
+                        filename = decryptedMsg.payload
                     else:
                         print('Wrong message type!')
 
@@ -226,7 +226,7 @@ class Server:
             response = decrypt_message(rsp, self.session_key)
             if response.type == FileTransferMessageTypes.DAT:
                 print('DAT received, saving file...')
-                payload = response.payload.decode('utf-8')
+                payload = response.payload
                 f = open(self.currentDir + '/' + filename, 'a')
                 f.write(payload)
                 f.close()

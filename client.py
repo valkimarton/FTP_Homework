@@ -129,7 +129,7 @@ class Client:
         seq_num = 1
         while not last:
             timestamp = get_current_timestamp()
-            f = open(self.currentDir + '/' + filename, 'r')
+            f = open(filename, 'r')
             payload = f.read(512).encode('utf-8')
             if len(payload) <= 512:
                 last = True
@@ -184,6 +184,7 @@ class Client:
         message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
                                                           payload, 0)
         self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
+        print('Download successful.')
 
     def save_file(self, filename: str):
         last = False
@@ -192,8 +193,8 @@ class Client:
             response = decrypt_message(rsp, self.session_key)
             if response.type == FileTransferMessageTypes.DAT:
                 print('DAT received, saving file...')
-                chunk = response.payload.decode('utf-8')
-                f = open(self.currentDir + '/' + filename, 'a')
+                chunk = response.payload
+                f = open(filename, 'a')
                 f.write(chunk)
                 f.close()
                 if response.last:
