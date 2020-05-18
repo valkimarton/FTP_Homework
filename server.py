@@ -25,7 +25,8 @@ class Server:
         self.active_client = ''
         self.session_key = b''
         self.shared_secret = b''
-        self.sequence_number = -1
+        self.sequence_number_server = -1
+        self.sequence_number_client = -1
         self.currentDir = ''
 
     def main_loop(self):
@@ -44,6 +45,15 @@ class Server:
 
                 status, msg = self.networkInterface.receive_msg(blocking=True)
                 decryptedMsg = decrypt_message(msg, self.session_key)
+                print('client message seq :' + str(decryptedMsg.sequence_number))
+                print('on the server : ' + str(self.sequence_number_client))
+                if self.seq_num_isvalid(decryptedMsg.sequence_number):
+                    self.sequence_number_client = decryptedMsg.sequence_number
+                else:
+                    decryptedMsg.id = '000'
+                    resMsg = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.ERR, get_current_timestamp(), ('Wrong message object').encode('utf-8'), (self.sequence_number_server + 1))
+                    self.networkInterface.send_msg(self.active_client, encrypt_message(resMsg, self.session_key))
+                    self.sequence_number_server += 1
 
                 # Ha HANDSHAKE típúsú üzenet jön
                 if decryptedMsg.id == HANDSHAKE_MESSAGE_ID:
@@ -70,8 +80,9 @@ class Server:
                             resMsg = 'Delete a folder: ' + decryptedMsg.payload
 
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.RMD,
-                                                                   get_current_timestamp(), resMsg.encode('utf-8'), 0)
-                        self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+                                                                   get_current_timestamp(), resMsg.encode('utf-8'), (self.sequence_number_server + 1))
+                        self.networkInterface.send_msg(self.active_client, encrypt_message(resMessage, self.session_key))
+                        self.sequence_number_server += 1
 
                     elif msgType == CommandMessageTypes.RMF:
                         print('RMF')
@@ -84,15 +95,17 @@ class Server:
                             resMsg = "Error, file dosen't exist in directory: " + self.currentDir
 
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.RMF,
-                                                                   get_current_timestamp(), resMsg.encode('utf-8'), 0)
-                        self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+                                                                   get_current_timestamp(), resMsg.encode('utf-8'), (self.sequence_number_server + 1))
+                        self.networkInterface.send_msg(self.active_client, encrypt_message(resMessage, self.session_key))
+                        self.sequence_number_server += 1
 
                     elif msgType == CommandMessageTypes.GWD:
                         print('GWD')
                         resMsg = 'Current directory: ' + self.currentDir
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD,
-                                                                   get_current_timestamp(), resMsg.encode('utf-8'), 0)
-                        self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+                                                                   get_current_timestamp(), resMsg.encode('utf-8'), (self.sequence_number_server + 1))
+                        self.networkInterface.send_msg(self.active_client, encrypt_message(resMessage, self.session_key))
+                        self.sequence_number_server += 1
 
 
                     elif msgType == CommandMessageTypes.CWD:
@@ -104,23 +117,25 @@ class Server:
                         if (changeto == '../') & (self.currentDir != rootDirOfClient):
                             self.currentDir = self.currentDir[0:self.currentDir.rindex('/')]
                             resMsg = "changed to: " + self.currentDir
-                        elif os.path.isdir(goIn) & (changeto != '../'):
+                        elif os.path.isdir(goIn) & ((changeto != '../' ) & (changeto != '..') & (changeto != '.')):
                             self.currentDir = goIn
                             resMsg = "changed to: " + self.currentDir
                         else:
                             resMsg = "Folder doesn't exists or can't navigate there"
 
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD,
-                                                                   get_current_timestamp(), resMsg.encode('utf-8'), 0)
-                        self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+                                                                   get_current_timestamp(), resMsg.encode('utf-8'), (self.sequence_number_server + 1))
+                        self.networkInterface.send_msg(self.active_client, encrypt_message(resMessage, self.session_key))
+                        self.sequence_number_server += 1
 
                     elif msgType == CommandMessageTypes.LST:
                         print('LST')
                         resMsg = os.listdir(self.currentDir)
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD,
                                                                    get_current_timestamp(),
-                                                                   ', '.join(resMsg).encode('utf-8'), 0)
-                        self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+                                                                   ', '.join(resMsg).encode('utf-8'), (self.sequence_number_server + 1))
+                        self.networkInterface.send_msg(self.active_client, encrypt_message(resMessage, self.session_key))
+                        self.sequence_number_server += 1
 
                     elif msgType == CommandMessageTypes.MKD:
                         print('MKD')
@@ -129,8 +144,9 @@ class Server:
                         responseMessage = 'Made a new dir, name: ' + decryptedMsg.payload
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.MKD,
                                                                    get_current_timestamp(),
-                                                                   responseMessage.encode('utf-8'), 0)
-                        self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+                                                                   responseMessage.encode('utf-8'), (self.sequence_number_server + 1))
+                        self.networkInterface.send_msg(self.active_client, encrypt_message(resMessage, self.session_key))
+                        self.sequence_number_server += 1
 
                 elif decryptedMsg.id == FILE_TRANSFER_MESSAGE_ID:
                     download = False
@@ -155,6 +171,22 @@ class Server:
 
         print('Server main loop ended... (Should not happen)')
 
+
+    #################
+    # SEQ_NUM
+    #################
+
+    def seq_num_isvalid(self, seq_num: int) -> bool:
+        if seq_num > self.sequence_number_client:
+            return True
+        else:
+            return False
+
+    ##################
+    # / SEQ_NUM
+    ##################
+
+
     ##################
     # NÓRI
     ##################
@@ -171,20 +203,18 @@ class Server:
     def init_download(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
-        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.DNL_NEW_ACK,
-                                                          timestamp,
-                                                          payload, 0)
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.DNL_NEW_ACK, timestamp,
+                                      payload, 0)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
-        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.SEND, timestamp,
-                                                          payload, 0)
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.SEND, timestamp,
+                                      payload, 0)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
 
     def init_upload(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
-        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.UPL_NEW_ACK,
-                                                          timestamp,
-                                                          payload, 0)
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.UPL_NEW_ACK, timestamp,
+                                      payload, 0)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
         status, rsp = self.networkInterface.receive_msg(blocking=True)
         response = decrypt_message(rsp, self.session_key)
@@ -202,9 +232,9 @@ class Server:
             if len(payload) < 2048:
                 last = True
                 f.close()
-                # payload.ljust(512, '0'.encode('utf-8'))  # padding
-            message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.DAT, timestamp,
-                                                              payload, seq_num, last)
+                payload.ljust(512, '0'.encode('utf-8'))  # padding
+            message = FileTransferMessage(self.own_address, FileTransferMessageTypes.DAT, timestamp,
+                                          payload, seq_num, last)
             self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
             seq_num += 1
             # Miután elküldött mindent, vár egy FIN-üzenetre, hogy a kliens megkapta-e az utolsó darabot is
@@ -242,15 +272,15 @@ class Server:
     def close_download(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
-        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
-                                                          payload, 0)
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
+                                      payload, 0)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
 
     def close_upload(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
-        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.FIN, timestamp,
-                                                          payload, 0)
+        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.FIN, timestamp,
+                                      payload, 0)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
         status, rsp = self.networkInterface.receive_msg(blocking=True)
         response = decrypt_message(rsp, self.session_key)

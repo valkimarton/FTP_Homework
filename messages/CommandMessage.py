@@ -33,7 +33,7 @@ class CommandMessage(AbstractMessage):
         return COMMAND_MESSAGE_ID + encrypted_headre_and_payload  # + authtag
 
     def get_sequence_num(self, bytestring: bytes) -> int:
-        return int.from_bytes(bytestring[17:21], byteorder='big')
+        return int.from_bytes(bytestring[16:20], byteorder='big')
 
     def get_payload(self, bytestring: bytes) -> str:
         payload = bytestring[20:].decode('utf-8')
