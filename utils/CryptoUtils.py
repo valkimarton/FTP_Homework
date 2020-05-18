@@ -36,25 +36,15 @@ def encrypt_message(message: AbstractMessage, key: bytes) -> bytes:
     public_part = message_in_bytes[0:4]        # ID and CLIEND fields are not encrypted, becouse they have to be read before decryption
     secret_part = message_in_bytes[4:]
 
-    print(message_in_bytes)
-    print('Public part: ', public_part)
-    print('Secret part: ', secret_part)
-
     # Encryption
     cipher = AES.new(key, AES.MODE_GCM)     # default MAC length: 16 byte. Default nonce: random 16 byte
     cipher.update(public_part)
     ciphertext, auth_tag = cipher.encrypt_and_digest(secret_part)
     nonce = cipher.nonce
 
-    print('Auth tag: ',auth_tag)
-    print('nonce: ',nonce)
-
-    print('Encrypted/Authenticated message: ', public_part + ciphertext + auth_tag + nonce)
-
     return public_part + ciphertext + auth_tag + nonce
 
 def decrypt_message(encrypted_message: bytes, key: bytes) -> AbstractMessage:
-    print('### DECRYPTING... ###')
 
     public_part = encrypted_message[0:4]
     encrypted_secret_part = encrypted_message[4:-32]
