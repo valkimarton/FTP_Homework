@@ -60,7 +60,7 @@ class Client:
                                 self.sequence_number_server = response.sequence_number
                             else:
                                 print('Wrong response from server')
-                
+
                 ########
                 # Other commands here
                 ########
@@ -77,7 +77,6 @@ class Client:
             if input('Continue? (y/n): ') == 'n': break
 
         print('Client main loop ended...')
-
 
     #################
     # SEQ_NUM
@@ -121,9 +120,10 @@ class Client:
     def upload(self, filename: str):
         payload = filename.encode('utf-8')
         timestamp = get_current_timestamp()
+        self.sequence_number_client += 1
         # Initiate connection
         message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.NEW_UPL, timestamp,
-                                                          payload, 0)
+                                                          payload, self.sequence_number_client)
         self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
         print('NEW_UPL message sent. Waiting for answer...')
         status, rsp = self.networkInterface.receive_msg(blocking=True)
@@ -135,8 +135,9 @@ class Client:
                 response.print()
                 print('Sending SEND')
                 timestamp = get_current_timestamp()
+                self.sequence_number_client += 1
                 message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.SEND,
-                                                                  timestamp, payload, 0)
+                                                                  timestamp, payload, self.sequence_number_client)
                 self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
                 print('Uploading file...')
                 self.send_file(filename)
@@ -147,19 +148,18 @@ class Client:
 
     def send_file(self, filename: str):
         last = False
-        seq_num = 1
         f = open(filename, 'rb')
         while not last:
             timestamp = get_current_timestamp()
+            self.sequence_number_client += 1
             payload = f.read(2048)
             if len(payload) < 2048:
                 last = True
                 f.close()
                 # payload.ljust(512, '0'.encode('utf-8'))  # padding
             message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.DAT, timestamp,
-                                                              payload, seq_num, last)
+                                                              payload, self.sequence_number_client, last)
             self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
-            seq_num += 1
             # Miután elküldött mindent, vár egy FIN-üzenetre, hogy a szerver megkapta-e az utolsó darabot is
             # Ha megkapja, akkor nyugtázza
             if last:
@@ -176,9 +176,10 @@ class Client:
     def download(self, filename: str):
         payload = filename.encode('utf-8')
         timestamp = get_current_timestamp()
+        self.sequence_number_client += 1
         # Initiate connection
         message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.NEW_DNL, timestamp,
-                                                          payload, 0)
+                                                          payload, self.sequence_number_client)
         self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
         # Waiting for response
         status, rsp = self.networkInterface.receive_msg(blocking=True)
@@ -202,8 +203,9 @@ class Client:
     def close_upload(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
+        self.sequence_number_client += 1
         message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
-                                                          payload, 0)
+                                                          payload, self.sequence_number_client)
         self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
 
     def save_file(self, filename: str):
@@ -233,8 +235,9 @@ class Client:
     def close_download(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
+        self.sequence_number_client += 1
         message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.FIN, timestamp,
-                                                          payload, 0)
+                                                          payload, self.sequence_number_client)
         self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
         status, rsp = self.networkInterface.receive_msg(blocking=True)
         if status:
