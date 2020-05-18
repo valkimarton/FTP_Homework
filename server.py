@@ -68,8 +68,9 @@ class Server:
                         else:
                             shutil.rmtree(path)
                             resMsg = 'Delete a folder: ' + decryptedMsg.payload
-                        
-                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.RMD, get_current_timestamp(), resMsg.encode('utf-8'), 0)
+
+                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.RMD,
+                                                                   get_current_timestamp(), resMsg.encode('utf-8'), 0)
                         self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
 
                     elif msgType == CommandMessageTypes.RMF:
@@ -78,17 +79,19 @@ class Server:
                         resMsg = ''
                         if os.path.isfile(pathWithFile):
                             os.remove(pathWithFile)
-                            resMsg = 'Removed a file from ' + self.currentDir + '/ ' + decryptedMsg.payload 
+                            resMsg = 'Removed a file from ' + self.currentDir + '/ ' + decryptedMsg.payload
                         else:
                             resMsg = "Error, file dosen't exist in directory: " + self.currentDir
-                        
-                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.RMF, get_current_timestamp(), resMsg.encode('utf-8'), 0)
+
+                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.RMF,
+                                                                   get_current_timestamp(), resMsg.encode('utf-8'), 0)
                         self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
 
                     elif msgType == CommandMessageTypes.GWD:
                         print('GWD')
                         resMsg = 'Current directory: ' + self.currentDir
-                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD, get_current_timestamp(), resMsg.encode('utf-8'), 0)
+                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD,
+                                                                   get_current_timestamp(), resMsg.encode('utf-8'), 0)
                         self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
 
 
@@ -107,13 +110,16 @@ class Server:
                         else:
                             resMsg = "Folder doesn't exists or can't navigate there"
 
-                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD, get_current_timestamp(), resMsg.encode('utf-8'), 0)
+                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD,
+                                                                   get_current_timestamp(), resMsg.encode('utf-8'), 0)
                         self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
 
                     elif msgType == CommandMessageTypes.LST:
                         print('LST')
                         resMsg = os.listdir(self.currentDir)
-                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD, get_current_timestamp(), ', '.join(resMsg).encode('utf-8'), 0)
+                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD,
+                                                                   get_current_timestamp(),
+                                                                   ', '.join(resMsg).encode('utf-8'), 0)
                         self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
 
                     elif msgType == CommandMessageTypes.MKD:
@@ -121,31 +127,29 @@ class Server:
                         path = basePath + decryptedMsg.payload
                         os.mkdir(path)
                         responseMessage = 'Made a new dir, name: ' + decryptedMsg.payload
-                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.MKD, get_current_timestamp(), responseMessage.encode('utf-8'), 0)
+                        resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.MKD,
+                                                                   get_current_timestamp(),
+                                                                   responseMessage.encode('utf-8'), 0)
                         self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
 
-                elif self.get_message_id(msg) == FILE_TRANSFER_MESSAGE_ID:
-                    upload = False
+                elif decryptedMsg.id == FILE_TRANSFER_MESSAGE_ID:
                     download = False
-                    if self.get_message_type(msg) == FileTransferMessageTypes.NEW_DNL:
+                    if decryptedMsg.type == FileTransferMessageTypes.NEW_DNL:
                         download = True
-                        filename = self.get_message_payload(msg)
-                        print(filename)
-                    elif self.get_message_type(msg) == FileTransferMessageTypes.NEW_UPL:
-                        upload = True
-                        filename = self.get_message_payload(msg)
-                        print(filename)
+                        filename = decryptedMsg.payload.decode('utf-8')
+                    elif decryptedMsg.type == FileTransferMessageTypes.NEW_UPL:
+                        download = False
+                        filename = decryptedMsg.payload.decode('utf-8')
                     else:
                         print('Wrong message type!')
 
-                    if (download):
+                    if download:
                         self.init_download(filename)
                         self.send_file(filename)
 
-                    elif (upload):
+                    elif not download:
                         self.init_upload(filename)
                         self.save_file(filename)
-
                 else:
                     print('Invalid message type')
 
@@ -158,46 +162,40 @@ class Server:
     def get_messages_type(self, message: bytes) -> str:
         return message[4:7].decode('utf-8')
 
-    def executeCommand():
+    def executeCommand(self):
         return 0
 
     ##################
     # PETI
     ##################
-    def get_message_type(self, message: bytes) -> str:
-        return message[4:7].decode('utf-8')
-
-    def get_message_payload(self, message: bytes) -> str:
-        return message[33:-16].decode('utf-8')
-
     def init_download(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
         message = FileTransferMessage(self.own_address, FileTransferMessageTypes.DNL_NEW_ACK, timestamp,
                                       payload, 0)
-        self.networkInterface.send_msg(self.active_client, message.to_bytes())
+        self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
         message = FileTransferMessage(self.own_address, FileTransferMessageTypes.SEND, timestamp,
                                       payload, 0)
-        self.networkInterface.send_msg(self.active_client, message.to_bytes())
+        self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
 
     def init_upload(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
         message = FileTransferMessage(self.own_address, FileTransferMessageTypes.UPL_NEW_ACK, timestamp,
                                       payload, 0)
-        self.networkInterface.send_msg(self.active_client, message.to_bytes())
-        status, msg = self.networkInterface.receive_msg(blocking=True)
-        message = FileTransferMessage()
-        message.from_bytes(msg)
-        if message.type == FileTransferMessageTypes.SEND:
-            print('SND received')
+        self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
+        status, rsp = self.networkInterface.receive_msg(blocking=True)
+        response = decrypt_message(rsp, self.session_key)
+        if response.type == FileTransferMessageTypes.SEND:
+            print('Response (SND):')
+            response.print()
 
     def send_file(self, filename: str):
         last = False
         seq_num = 1
-        while (last == False):
+        while not last:
             timestamp = get_current_timestamp()
-            f = open(filename, 'r')
+            f = open(self.currentDir + '/' + filename, 'r')
             payload = f.read(512).encode('utf-8')
             if len(payload) <= 512:
                 last = True
@@ -205,16 +203,16 @@ class Server:
                 payload.ljust(512, '0'.encode('utf-8'))  # padding
             message = FileTransferMessage(self.own_address, FileTransferMessageTypes.DAT, timestamp,
                                           payload, seq_num, last)
-            self.networkInterface.send_msg(self.active_client, message.to_bytes())
+            self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
             seq_num += 1
             # Miután elküldött mindent, vár egy FIN-üzenetre, hogy a kliens megkapta-e az utolsó darabot is
             # Ha megkapja, akkor nyugtázza
             if last:
-                status, msg = self.networkInterface.receive_msg(blocking=True)
-                message = FileTransferMessage()
-                message.from_bytes(msg)
-                if message.type == FileTransferMessageTypes.FIN:
+                status, rsp = self.networkInterface.receive_msg(blocking=True)
+                response = decrypt_message(rsp, self.session_key)
+                if response.type == FileTransferMessageTypes.FIN:
                     print('FIN received, closing download...')
+                    response.print()
                     self.close_download(filename)
                     print('Done.')
                     break
@@ -222,16 +220,15 @@ class Server:
     def save_file(self, filename: str):
         last = False
         while not last:
-            status, msg = self.networkInterface.receive_msg(blocking=True)
-            message = FileTransferMessage()
-            message.from_bytes(msg)
-            if message.type == FileTransferMessageTypes.DAT:
+            status, rsp = self.networkInterface.receive_msg(blocking=True)
+            response = decrypt_message(rsp, self.session_key)
+            if response.type == FileTransferMessageTypes.DAT:
                 print('DAT received, saving file...')
-                payload = message.payload
-                f = open(filename, 'a')
+                payload = response.payload.decode('utf-8')
+                f = open(self.currentDir + '/' + filename, 'a')
                 f.write(payload)
                 f.close()
-                if message.last:
+                if response.last:
                     last = True
             else:
                 print('Invalid message type!')
@@ -245,19 +242,25 @@ class Server:
         payload = filename.encode('utf-8')
         message = FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
                                       payload, 0)
-        self.networkInterface.send_msg(self.active_client, message.to_bytes())
+        self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
 
     def close_upload(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
         message = FileTransferMessage(self.own_address, FileTransferMessageTypes.FIN, timestamp,
                                       payload, 0)
-        self.networkInterface.send_msg(self.active_client, message.to_bytes())
-        status, msg = self.networkInterface.receive_msg(blocking=True)
-        message = FileTransferMessage()
-        message.from_bytes(msg)
-        if message.type == FileTransferMessageTypes.ACK_FIN:
-            print('FIN_ACK received, closing upload...')
+        self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
+        status, rsp = self.networkInterface.receive_msg(blocking=True)
+        response = decrypt_message(rsp, self.session_key)
+        if status:
+            if response.type == FileTransferMessageTypes.ACK_FIN:
+                print('FIN_ACK received, closing upload...')
+                print('Response (ACK_FIN):')
+                response.print()
+            else:
+                print('Wrong message type!')
+        else:
+            print('No answer arrived!')
 
     ##################
     # MARCI
@@ -268,7 +271,8 @@ class Server:
         print('Handling a handshake request...')
 
         status, msg = self.networkInterface.receive_msg(blocking=True)
-        message = decrypt_message(msg, get_shared_secret_by_client(msg[1:2].decode('utf-8'), self.secret_encryption_key)) # még nincs beállítva a self.shared_secret
+        message = decrypt_message(msg, get_shared_secret_by_client(msg[1:2].decode('utf-8'),
+                                                                   self.secret_encryption_key))  # még nincs beállítva a self.shared_secret
         message.print()
 
         # felhasználónév + jelszó ellenőrzés
@@ -295,8 +299,9 @@ class Server:
 
     # érvényes Hanshake NEW üzenet elfogadása
     def accept_handshake(self):
-        response = HandshakeMessage.HandshakeMessage(self.active_client, HandshakeMessageTypes.NEW_ACK, get_current_timestamp(),
-                                    self.session_key)
+        response = HandshakeMessage.HandshakeMessage(self.active_client, HandshakeMessageTypes.NEW_ACK,
+                                                     get_current_timestamp(),
+                                                     self.session_key)
         self.networkInterface.send_msg(self.active_client, encrypt_message(response, self.shared_secret))
         print('Handshake accepted...')
 
@@ -317,7 +322,8 @@ class Server:
 
     # Kapcsolat bontása FIN esetén
     def close_session(self):
-        fin_ack = HandshakeMessage.HandshakeMessage(self.active_client, HandshakeMessageTypes.FIN_ACK, get_current_timestamp())
+        fin_ack = HandshakeMessage.HandshakeMessage(self.active_client, HandshakeMessageTypes.FIN_ACK,
+                                                    get_current_timestamp())
         self.networkInterface.send_msg(self.active_client, encrypt_message(fin_ack, self.shared_secret))
 
         # !!! Implement wait for FIN_ACK
@@ -327,7 +333,9 @@ class Server:
 
     def reject_handshake(self, message: HandshakeMessage):
         response = HandshakeMessage.HandshakeMessage(message.client, HandshakeMessageTypes.REJ, get_current_timestamp())
-        self.networkInterface.send_msg(message.client, encrypt_message(response, get_shared_secret_by_client(message.client, self.secret_encryption_key)))  # még nincs beállítva a self.shared_secret
+        self.networkInterface.send_msg(message.client, encrypt_message(response,
+                                                                       get_shared_secret_by_client(message.client,
+                                                                                                   self.secret_encryption_key)))  # még nincs beállítva a self.shared_secret
         print('Handshake rejected...')
 
     # check credentials

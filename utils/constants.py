@@ -15,5 +15,5 @@ CLIENT_SPACE = network_interface.addr_space
 TYPE_SPACE = {
     'H': ['NEW', 'NAC', 'REJ', 'FIN', 'FAC'],  # A HandshakeMessage lehetséges TYPE mezői
     'C': ['MKD', 'RMD', 'GWD', 'CWD', 'LST', 'RMF'], # A CommandMessage lehetseges TYPE mezoi
-    'F': ['UNW', 'DNW', 'UNA', 'DNA', 'SND', 'DAT', 'FIN', 'FNA']  # Fájlátvitel lehetséges TYPE mezői
+    'F': ['UNW', 'DNW', 'UNA', 'DNA', 'SND', 'DAT', 'FIN', 'FNA']  # Fájlátvitel (FileTransferMessage) lehetséges TYPE mezői
 }

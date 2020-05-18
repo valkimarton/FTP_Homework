@@ -36,4 +36,4 @@ class FileTransferMessage(AbstractMessage):
         return bool.from_bytes(bytestring[21:22], byteorder='big')
 
     def get_payload(self, bytestring: bytes) -> str:
-        return
+        return bytestring[22:].decode('utf-8')
