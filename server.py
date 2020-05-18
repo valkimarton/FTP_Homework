@@ -136,10 +136,10 @@ class Server:
                     download = False
                     if decryptedMsg.type == FileTransferMessageTypes.NEW_DNL:
                         download = True
-                        filename = decryptedMsg.payload
+                        filename = decryptedMsg.payload.decode('utf-8')
                     elif decryptedMsg.type == FileTransferMessageTypes.NEW_UPL:
                         download = False
-                        filename = decryptedMsg.payload
+                        filename = decryptedMsg.payload.decode('utf-8')
                     else:
                         print('Wrong message type!')
 
@@ -195,11 +195,11 @@ class Server:
     def send_file(self, filename: str):
         last = False
         seq_num = 1
+        f = open(self.currentDir + '/' + filename, 'rb')
         while not last:
             timestamp = get_current_timestamp()
-            f = open(self.currentDir + '/' + filename, 'r')
-            payload = f.read(512).encode('utf-8')
-            if len(payload) <= 512:
+            payload = f.read(2048)
+            if len(payload) < 2048:
                 last = True
                 f.close()
                 # payload.ljust(512, '0'.encode('utf-8'))  # padding
@@ -221,17 +221,17 @@ class Server:
 
     def save_file(self, filename: str):
         last = False
+        f = open(self.currentDir + '/' + filename, 'ab')
         while not last:
             status, rsp = self.networkInterface.receive_msg(blocking=True)
             response = decrypt_message(rsp, self.session_key)
             if response.type == FileTransferMessageTypes.DAT:
                 print('DAT received, saving file...')
                 payload = response.payload
-                f = open(self.currentDir + '/' + filename, 'a')
                 f.write(payload)
-                f.close()
                 if response.last:
                     last = True
+                    f.close()
             else:
                 print('Invalid message type!')
                 break

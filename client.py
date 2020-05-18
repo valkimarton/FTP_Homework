@@ -127,11 +127,11 @@ class Client:
     def send_file(self, filename: str):
         last = False
         seq_num = 1
+        f = open(filename, 'rb')
         while not last:
             timestamp = get_current_timestamp()
-            f = open(filename, 'r')
-            payload = f.read(512).encode('utf-8')
-            if len(payload) <= 512:
+            payload = f.read(2048)
+            if len(payload) < 2048:
                 last = True
                 f.close()
                 # payload.ljust(512, '0'.encode('utf-8'))  # padding
@@ -187,6 +187,7 @@ class Client:
 
     def save_file(self, filename: str):
         last = False
+        f = open(filename, 'ab')
         while not last:
             status, rsp = self.networkInterface.receive_msg(blocking=True)
             if status:
@@ -194,11 +195,10 @@ class Client:
                 if response.type == FileTransferMessageTypes.DAT:
                     print('DAT received, saving file...')
                     chunk = response.payload
-                    f = open(filename, 'a')
                     f.write(chunk)
-                    f.close()
                     if response.last:
                         last = True
+                        f.close()
                 else:
                     print('Invalid message type!')
                     break
