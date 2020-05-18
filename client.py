@@ -54,8 +54,7 @@ class Client:
                                                        encrypt_message(commandMessage, self.session_key))
                         status, rsp = self.networkInterface.receive_msg(blocking=True)
                         if status:
-                            response = CommandMessage.CommandMessage()
-                            response.from_bytes(rsp)
+                            response = decrypt_message(rsp, self.session_key)
                             if self.seq_num_isvalid(response.sequence_number):
                                 print(response.payload)
                             else:
@@ -84,10 +83,10 @@ class Client:
     #################
 
     def seq_num_isvalid(self, seq_num: int) -> bool:
-        if seq_num <= self.sequence_number_server:
-            return False
-        else:
+        if seq_num > self.sequence_number_server:
             return True
+        else:
+            return False
 
     ##################
     # / SEQ_NUM
