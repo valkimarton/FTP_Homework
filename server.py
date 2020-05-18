@@ -71,12 +71,10 @@ class Server:
 
                 # Ha COMMAND típúsú üzenet jön
                 elif decryptedMsg.id == COMMAND_MESSAGE_ID:
-                    print('got a command message')
                     msgType = decryptedMsg.type
                     basePath = self.currentDir + '/'
 
                     if msgType == CommandMessageTypes.RMD:
-                        print('RMD')
                         path = basePath + decryptedMsg.payload
                         resMsg = ''
                         if not os.path.exists(path) & (self.currentDir != path):
@@ -93,7 +91,6 @@ class Server:
                         self.sequence_number_server += 1
 
                     elif msgType == CommandMessageTypes.RMF:
-                        print('RMF')
                         pathWithFile = basePath + decryptedMsg.payload
                         resMsg = ''
                         if os.path.isfile(pathWithFile):
@@ -110,7 +107,6 @@ class Server:
                         self.sequence_number_server += 1
 
                     elif msgType == CommandMessageTypes.GWD:
-                        print('GWD')
                         resMsg = 'Current directory: ' + self.currentDir
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD,
                                                                    get_current_timestamp(), resMsg.encode('utf-8'),
@@ -121,7 +117,6 @@ class Server:
 
 
                     elif msgType == CommandMessageTypes.CWD:
-                        print('CWD')
                         changeto = decryptedMsg.payload
                         goIn = self.currentDir + '/' + changeto
                         rootDirOfClient = 'server_root/' + self.active_client + '_root'
@@ -143,7 +138,6 @@ class Server:
                         self.sequence_number_server += 1
 
                     elif msgType == CommandMessageTypes.LST:
-                        print('LST')
                         resMsg = os.listdir(self.currentDir)
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD,
                                                                    get_current_timestamp(),
@@ -154,7 +148,6 @@ class Server:
                         self.sequence_number_server += 1
 
                     elif msgType == CommandMessageTypes.MKD:
-                        print('MKD')
                         path = basePath + decryptedMsg.payload
                         os.mkdir(path)
                         responseMessage = 'Made a new dir, name: ' + decryptedMsg.payload
@@ -189,9 +182,6 @@ class Server:
 
         print('Server main loop ended... (Should not happen)')
 
-    #################
-    # SEQ_NUM
-    #################
 
     def seq_num_isvalid(self, seq_num: int) -> bool:
         if seq_num > self.sequence_number_client:
@@ -199,13 +189,6 @@ class Server:
         else:
             return False
 
-    ##################
-    # / SEQ_NUM
-    ##################
-
-    ##################
-    # NÓRI
-    ##################
 
     def get_messages_type(self, message: bytes) -> str:
         return message[4:7].decode('utf-8')
@@ -213,9 +196,6 @@ class Server:
     def executeCommand(self):
         return 0
 
-    ##################
-    # PETI
-    ##################
     def init_download(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
@@ -313,10 +293,6 @@ class Server:
                 print('Wrong message type!')
         else:
             print('No answer arrived!')
-
-    ##################
-    # MARCI
-    ##################
 
     # A HANDSHAKE loop-ban várja és kezeli az érkező üzeneteket
     def handle_handshake_request(self):

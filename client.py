@@ -46,7 +46,6 @@ class Client:
                     self.disconnect_from_server()
                     break
                 elif command[0:3] in TYPE_SPACE['C']:
-                    print('Use command protocol')
                     commandMessage = self.makeMessage(command, self.own_address, self.sequence_number_client)
                     if commandMessage != None:
                         self.sequence_number_client += 1
@@ -60,10 +59,7 @@ class Client:
                                 self.sequence_number_server = response.sequence_number
                             else:
                                 print('Wrong response from server')
-
-                ########
-                # Other commands here
-                ########
+         
 
                 elif command[0:3] == 'UPL':
                     filename = command[4:]
@@ -78,9 +74,6 @@ class Client:
 
         print('Client main loop ended...')
 
-    #################
-    # SEQ_NUM
-    #################
 
     def seq_num_isvalid(self, seq_num: int) -> bool:
         if seq_num > self.sequence_number_server:
@@ -88,13 +81,6 @@ class Client:
         else:
             return False
 
-    ##################
-    # / SEQ_NUM
-    ##################
-
-    ##################
-    # NÓRI
-    ##################
 
     def makeMessage(self, fullCommand: str, own_addr: str, seq_num: int) -> CommandMessage:
         commmand = fullCommand[0:3]
@@ -114,9 +100,6 @@ class Client:
         else:
             return True
 
-    ##################
-    # PETI
-    ##################
     def upload(self, filename: str):
         payload = filename.encode('utf-8')
         timestamp = get_current_timestamp()
@@ -250,9 +233,6 @@ class Client:
         else:
             print('No answer received!')
 
-    ##################
-    # MARCI
-    ##################
 
     # Csatlakozás kezdeményezése, válasz kezelése, session_state beállítása
     def connect_to_server(self):
@@ -303,14 +283,6 @@ class Client:
         self.session_key = ''
         self.sequence_number = -1
 
-    # Nem blokkoló mechanizmus parancs elküldésére és válaszra várásra
-    # A válasz elveszése, kései érkezése probléma lehet.
-    # A válasz elveszése esetében a blokkoló várakozásból nem lehet kilépni
-    # Erre lehet csinálni egy ilyen retry-os nem blokkoló várakozásos megoldást, ha nagyon sok időnk van.
-    #
-    # call_to_make: Az elküldendő üzenet
-    # wait_length: várakozási idő két újrapróbálkozás között
-    # num_of_retries: maximum próbálkozások száma
     def call_wait_retry(self, call_to_make, wait_length, num_of_reties):
         print('Not implemented')
 
