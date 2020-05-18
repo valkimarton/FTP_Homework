@@ -320,12 +320,11 @@ class Server:
 
     # A HANDSHAKE loop-ban várja és kezeli az érkező üzeneteket
     def handle_handshake_request(self):
-        print('Handling a handshake request...')
+        print('Waiting for handshake request...')
 
         status, msg = self.networkInterface.receive_msg(blocking=True)
         message = decrypt_message(msg, get_shared_secret_by_client(msg[1:2].decode('utf-8'),
                                                                    self.secret_encryption_key))  # még nincs beállítva a self.shared_secret
-        message.print()
 
         # felhasználónév + jelszó ellenőrzés
         if not self.is_password_valid(message):

@@ -271,11 +271,8 @@ class Client:
         response = decrypt_message(rsp, self.shared_secret)  # decrypting response
         if response.type == HandshakeMessageTypes.NEW_ACK:
             self.create_session(response)
-        else:
-            pass
-
-        print('Response (' + response.type + '):')
-        response.print()
+        elif response.type == HandshakeMessageTypes.REJ:
+            print('Connection Failed')
 
     # Session state beállítása
     def create_session(self, response: HandshakeMessage):
@@ -296,15 +293,9 @@ class Client:
         response = decrypt_message(rsp, self.shared_secret)
         if response.type == HandshakeMessageTypes.FIN_ACK:
             self.reset_state()
-            print('Session closed (Partially implemented...)')
+            print('Session closed')
         else:
             print('Anticipated FIN_ACK, but got something else...')
-
-        '''
-        Handshake process incomplete
-        '''
-
-        print('Closing Handshake Partially implemented...')
 
     def reset_state(self):
         self.server_address = ''
