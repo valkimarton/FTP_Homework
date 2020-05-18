@@ -25,13 +25,6 @@ class CommandMessage(AbstractMessage):
     def sequence_number_to_bytes(self):
         return self.sequence_number.to_bytes(length=4, byteorder='big')  # 4 byte-on van ábrázolva
 
-    def make_encrypted_command_message(self, SKey: str):
-        AE = AES.new(SKey, AES.MODE_GCM, mac_len=16)
-        AE.update(self.header_to_bytes)
-        # authtag = '' #should be 16 bytes
-        encrypted_headre_and_payload = AE.encrypt_and_digest(super().payload)
-        return COMMAND_MESSAGE_ID + encrypted_headre_and_payload  # + authtag
-
     def get_sequence_num(self, bytestring: bytes) -> int:
         return int.from_bytes(bytestring[16:20], byteorder='big')
 
