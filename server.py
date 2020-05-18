@@ -44,16 +44,20 @@ class Server:
                 print('Waiting for commands')
 
                 status, msg = self.networkInterface.receive_msg(blocking=True)
-                decryptedMsg = decrypt_message(msg, self.session_key)
-                print('client message seq :' + str(decryptedMsg.sequence_number))
-                print('on the server : ' + str(self.sequence_number_client))
-                if self.seq_num_isvalid(decryptedMsg.sequence_number):
-                    self.sequence_number_client = decryptedMsg.sequence_number
+                decryptedMsg = b''
+                if self.get_message_id(msg) == HANDSHAKE_MESSAGE_ID:
+                    decrypt_message(msg, self.shared_secret)
                 else:
-                    decryptedMsg.id = '000'
-                    resMsg = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.ERR, get_current_timestamp(), ('Wrong message object').encode('utf-8'), (self.sequence_number_server + 1))
-                    self.networkInterface.send_msg(self.active_client, encrypt_message(resMsg, self.session_key))
-                    self.sequence_number_server += 1
+                    decryptedMsg = decrypt_message(msg, self.session_key)
+                    print('client message seq :' + str(decryptedMsg.sequence_number))
+                    print('on the server : ' + str(self.sequence_number_client))
+                    if self.seq_num_isvalid(decryptedMsg.sequence_number):
+                        self.sequence_number_client = decryptedMsg.sequence_number
+                    else:
+                        decryptedMsg.id = '000'
+                        resMsg = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.ERR, get_current_timestamp(), ('Wrong message object').encode('utf-8'), (self.sequence_number_server + 1))
+                        self.networkInterface.send_msg(self.active_client, encrypt_message(resMsg, self.session_key))
+                        self.sequence_number_server += 1
 
                 # Ha HANDSHAKE típúsú üzenet jön
                 if decryptedMsg.id == HANDSHAKE_MESSAGE_ID:
