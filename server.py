@@ -202,7 +202,7 @@ class Server:
             if len(payload) <= 512:
                 last = True
                 f.close()
-                payload.ljust(512, '0'.encode('utf-8'))  # padding
+                # payload.ljust(512, '0'.encode('utf-8'))  # padding
             message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.DAT, timestamp,
                                                               payload, seq_num, last)
             self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))

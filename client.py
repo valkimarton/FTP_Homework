@@ -184,27 +184,47 @@ class Client:
         message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
                                                           payload, 0)
         self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
-        print('Download successful.')
 
     def save_file(self, filename: str):
         last = False
         while not last:
             status, rsp = self.networkInterface.receive_msg(blocking=True)
+            if status:
+                response = decrypt_message(rsp, self.session_key)
+                if response.type == FileTransferMessageTypes.DAT:
+                    print('DAT received, saving file...')
+                    chunk = response.payload
+                    f = open(filename, 'a')
+                    f.write(chunk)
+                    f.close()
+                    if response.last:
+                        last = True
+                else:
+                    print('Invalid message type!')
+                    break
+                if last:
+                    print('Done.')
+                    self.close_download(filename)
+                    print('Download successful.')
+            else:
+                print('No answer received!')
+
+    def close_download(self, filename: str):
+        timestamp = get_current_timestamp()
+        payload = filename.encode('utf-8')
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.FIN, timestamp,
+                                                          payload, 0)
+        self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
+        status, rsp = self.networkInterface.receive_msg(blocking=True)
+        if status:
             response = decrypt_message(rsp, self.session_key)
-            if response.type == FileTransferMessageTypes.DAT:
-                print('DAT received, saving file...')
-                chunk = response.payload
-                f = open(filename, 'a')
-                f.write(chunk)
-                f.close()
-                if response.last:
-                    last = True
+            if response.type == FileTransferMessageTypes.ACK_FIN:
+                print('Response (ACK_FIN):')
+                response.print()
             else:
                 print('Invalid message type!')
-                break
-            if last:
-                print('Done.')
-                self.close_upload(filename)
+        else:
+            print('No answer received!')
 
     ##################
     # MARCI

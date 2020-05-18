@@ -30,10 +30,10 @@ class FileTransferMessage(AbstractMessage):
         return int(self.last).to_bytes(length=1, byteorder='big')  # bool -> int -> bytes
 
     def get_sequence_num(self, bytestring: bytes) -> int:
-        return int.from_bytes(bytestring[17:21], byteorder='big')
+        return int.from_bytes(bytestring[16:20], byteorder='big')
 
     def get_last(self, bytestring: bytes) -> bool:
-        return bool.from_bytes(bytestring[21:22], byteorder='big')
+        return bool.from_bytes(bytestring[20:21], byteorder='big')
 
     def get_payload(self, bytestring: bytes) -> str:
-        return bytestring[22:].decode('utf-8')
+        return bytestring[21:].decode('utf-8')
