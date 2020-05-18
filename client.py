@@ -47,9 +47,9 @@ class Client:
                     break
                 elif command[0:3] in TYPE_SPACE['C']:
                     print('Use command protocol')
-                    commandMessage = self.makeMessage(command, self.own_address, self.sequence_number)
+                    commandMessage = self.makeMessage(command, self.own_address, self.sequence_number_client)
                     if commandMessage != None:
-                        self.sequence_number += 1
+                        self.sequence_number_client += 1
                         self.networkInterface.send_msg(self.server_address,
                                                        encrypt_message(commandMessage, self.session_key))
                         status, rsp = self.networkInterface.receive_msg(blocking=True)
@@ -57,6 +57,7 @@ class Client:
                             response = decrypt_message(rsp, self.session_key)
                             if self.seq_num_isvalid(response.sequence_number):
                                 print(response.payload)
+                                self.sequence_number_server = response.sequence_number
                             else:
                                 print('Wrong response from server')
                 
