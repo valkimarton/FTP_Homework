@@ -171,18 +171,20 @@ class Server:
     def init_download(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.DNL_NEW_ACK, timestamp,
-                                      payload, 0)
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.DNL_NEW_ACK,
+                                                          timestamp,
+                                                          payload, 0)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.SEND, timestamp,
-                                      payload, 0)
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.SEND, timestamp,
+                                                          payload, 0)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
 
     def init_upload(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.UPL_NEW_ACK, timestamp,
-                                      payload, 0)
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.UPL_NEW_ACK,
+                                                          timestamp,
+                                                          payload, 0)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
         status, rsp = self.networkInterface.receive_msg(blocking=True)
         response = decrypt_message(rsp, self.session_key)
@@ -201,8 +203,8 @@ class Server:
                 last = True
                 f.close()
                 payload.ljust(512, '0'.encode('utf-8'))  # padding
-            message = FileTransferMessage(self.own_address, FileTransferMessageTypes.DAT, timestamp,
-                                          payload, seq_num, last)
+            message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.DAT, timestamp,
+                                                              payload, seq_num, last)
             self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
             seq_num += 1
             # Miután elküldött mindent, vár egy FIN-üzenetre, hogy a kliens megkapta-e az utolsó darabot is
@@ -240,15 +242,15 @@ class Server:
     def close_download(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
-                                      payload, 0)
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
+                                                          payload, 0)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
 
     def close_upload(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.FIN, timestamp,
-                                      payload, 0)
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.FIN, timestamp,
+                                                          payload, 0)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
         status, rsp = self.networkInterface.receive_msg(blocking=True)
         response = decrypt_message(rsp, self.session_key)

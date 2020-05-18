@@ -101,7 +101,8 @@ class Client:
         payload = filename.encode('utf-8')
         timestamp = get_current_timestamp()
         # Initiate connection
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.NEW_UPL, timestamp, payload, 0)
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.NEW_UPL, timestamp,
+                                                          payload, 0)
         self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
         print('NEW_UPL message sent. Waiting for answer...')
         status, rsp = self.networkInterface.receive_msg(blocking=True)
@@ -113,7 +114,8 @@ class Client:
                 response.print()
                 print('Sending SEND')
                 timestamp = get_current_timestamp()
-                message = FileTransferMessage(self.own_address, FileTransferMessageTypes.SEND, timestamp, payload, 0)
+                message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.SEND,
+                                                                  timestamp, payload, 0)
                 self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
                 print('Uploading file...')
                 self.send_file(filename)
@@ -133,8 +135,8 @@ class Client:
                 last = True
                 f.close()
                 # payload.ljust(512, '0'.encode('utf-8'))  # padding
-            message = FileTransferMessage(self.own_address, FileTransferMessageTypes.DAT, timestamp,
-                                          payload, seq_num, last)
+            message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.DAT, timestamp,
+                                                              payload, seq_num, last)
             self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
             seq_num += 1
             # Miután elküldött mindent, vár egy FIN-üzenetre, hogy a szerver megkapta-e az utolsó darabot is
@@ -154,7 +156,8 @@ class Client:
         payload = filename.encode('utf-8')
         timestamp = get_current_timestamp()
         # Initiate connection
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.NEW_DNL, timestamp, payload, 0)
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.NEW_DNL, timestamp,
+                                                          payload, 0)
         self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
         # Waiting for response
         status, rsp = self.networkInterface.receive_msg(blocking=True)
@@ -178,8 +181,8 @@ class Client:
     def close_upload(self, filename: str):
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
-                                      payload, 0)
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
+                                                          payload, 0)
         self.networkInterface.send_msg(self.server_address, encrypt_message(message, self.session_key))
 
     def save_file(self, filename: str):
