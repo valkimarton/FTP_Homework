@@ -44,9 +44,9 @@ class Server:
                 print('Waiting for commands')
 
                 status, msg = self.networkInterface.receive_msg(blocking=True)
-                decryptedMsg = b''
+                decryptedMsg = None
                 if self.get_message_id(msg) == HANDSHAKE_MESSAGE_ID:
-                    decrypt_message(msg, self.shared_secret)
+                    decryptedMsg = decrypt_message(msg, self.shared_secret)
                 else:
                     decryptedMsg = decrypt_message(msg, self.session_key)
                     print('client message seq :' + str(decryptedMsg.sequence_number))
