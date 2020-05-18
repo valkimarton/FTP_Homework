@@ -26,7 +26,8 @@ class Client:
         self.connected_to_server = False
         self.server_address = ''
         self.session_key = ''
-        self.sequence_number = -1
+        self.sequence_number_client = -1
+        self.sequence_number_server = -1
 
     def main_loop(self):
         print('Client main loop started...')
@@ -55,7 +56,11 @@ class Client:
                         if status:
                             response = CommandMessage.CommandMessage()
                             response.from_bytes(rsp)
-                            print(response.payload)
+                            if self.seq_num_isvalid(response.sequence_number):
+                                print(response.payload)
+                            else:
+                                print('Wrong response from server')
+                
                 ########
                 # Other commands here
                 ########
@@ -72,6 +77,21 @@ class Client:
             if input('Continue? (y/n): ') == 'n': break
 
         print('Client main loop ended...')
+
+
+    #################
+    # SEQ_NUM
+    #################
+
+    def seq_num_isvalid(self, seq_num: int) -> bool:
+        if seq_num <= self.sequence_number_server:
+            return False
+        else:
+            return True
+
+    ##################
+    # / SEQ_NUM
+    ##################
 
     ##################
     # NÓRI
@@ -90,7 +110,8 @@ class Client:
 
     def payload_is_valid(self, payload: str) -> bool:  # bad file or foldername format exception?
         if len(payload.split()) > 1:
-            raise Exception('Bad file or folder format, use just one word')
+            print('Bad file or folder format, use just one word')
+            return False
         else:
             return True
 

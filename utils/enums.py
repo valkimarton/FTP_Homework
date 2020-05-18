@@ -13,6 +13,7 @@ class CommandMessageTypes:
     CWD = 'CWD'
     LST = 'LST'
     RMF = 'RMF'
+    ERR = 'ERR'
 
 
 class FileTransferMessageTypes:

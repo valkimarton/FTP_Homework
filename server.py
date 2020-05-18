@@ -25,7 +25,8 @@ class Server:
         self.active_client = ''
         self.session_key = b''
         self.shared_secret = b''
-        self.sequence_number = -1
+        self.sequence_number_server = -1
+        self.sequence_number_client = -1
         self.currentDir = ''
 
     def main_loop(self):
@@ -44,6 +45,13 @@ class Server:
 
                 status, msg = self.networkInterface.receive_msg(blocking=True)
                 decryptedMsg = decrypt_message(msg, self.session_key)
+                if self.seq_num_isvalid(decryptedMsg.sequence_number):
+                    self.sequence_number_client = decryptedMsg.sequence_number
+                else:
+                    decrypt_message.id = '0000'
+                    resMsg = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.ERR, get_current_timestamp(), ('Wrong message object').encode('utf-8'), (self.sequence_number_server + 1))
+                    self.networkInterface.send_msg(self.active_client, resMsg.to_bytes())
+                    self.sequence_number_server += 1
 
                 # Ha HANDSHAKE típúsú üzenet jön
                 if decryptedMsg.id == HANDSHAKE_MESSAGE_ID:
@@ -70,8 +78,9 @@ class Server:
                             resMsg = 'Delete a folder: ' + decryptedMsg.payload
 
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.RMD,
-                                                                   get_current_timestamp(), resMsg.encode('utf-8'), 0)
+                                                                   get_current_timestamp(), resMsg.encode('utf-8'), (self.sequence_number_server + 1))
                         self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+                        self.sequence_number_server += 1
 
                     elif msgType == CommandMessageTypes.RMF:
                         print('RMF')
@@ -84,15 +93,17 @@ class Server:
                             resMsg = "Error, file dosen't exist in directory: " + self.currentDir
 
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.RMF,
-                                                                   get_current_timestamp(), resMsg.encode('utf-8'), 0)
+                                                                   get_current_timestamp(), resMsg.encode('utf-8'), (self.sequence_number_server + 1))
                         self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+                        self.sequence_number_server += 1
 
                     elif msgType == CommandMessageTypes.GWD:
                         print('GWD')
                         resMsg = 'Current directory: ' + self.currentDir
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD,
-                                                                   get_current_timestamp(), resMsg.encode('utf-8'), 0)
+                                                                   get_current_timestamp(), resMsg.encode('utf-8'), (self.sequence_number_server + 1))
                         self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+                        self.sequence_number_server += 1
 
 
                     elif msgType == CommandMessageTypes.CWD:
@@ -111,16 +122,18 @@ class Server:
                             resMsg = "Folder doesn't exists or can't navigate there"
 
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD,
-                                                                   get_current_timestamp(), resMsg.encode('utf-8'), 0)
+                                                                   get_current_timestamp(), resMsg.encode('utf-8'), (self.sequence_number_server + 1))
                         self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+                        self.sequence_number_server += 1
 
                     elif msgType == CommandMessageTypes.LST:
                         print('LST')
                         resMsg = os.listdir(self.currentDir)
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.GWD,
                                                                    get_current_timestamp(),
-                                                                   ', '.join(resMsg).encode('utf-8'), 0)
+                                                                   ', '.join(resMsg).encode('utf-8'), (self.sequence_number_server + 1))
                         self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+                        self.sequence_number_server += 1
 
                     elif msgType == CommandMessageTypes.MKD:
                         print('MKD')
@@ -129,8 +142,9 @@ class Server:
                         responseMessage = 'Made a new dir, name: ' + decryptedMsg.payload
                         resMessage = CommandMessage.CommandMessage(self.own_address, CommandMessageTypes.MKD,
                                                                    get_current_timestamp(),
-                                                                   responseMessage.encode('utf-8'), 0)
+                                                                   responseMessage.encode('utf-8'), (self.sequence_number_server + 1))
                         self.networkInterface.send_msg(self.active_client, resMessage.to_bytes())
+                        self.sequence_number_server += 1
 
                 elif decryptedMsg.id == FILE_TRANSFER_MESSAGE_ID:
                     download = False
@@ -154,6 +168,22 @@ class Server:
                     print('Invalid message type')
 
         print('Server main loop ended... (Should not happen)')
+
+
+    #################
+    # SEQ_NUM
+    #################
+
+    def seq_num_isvalid(self, seq_num: int) -> bool:
+        if seq_num <= self.sequence_number_client:
+            return False
+        else:
+            return True
+
+    ##################
+    # / SEQ_NUM
+    ##################
+
 
     ##################
     # NÓRI
