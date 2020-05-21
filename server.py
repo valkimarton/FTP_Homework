@@ -200,11 +200,11 @@ class Server:
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
         self.sequence_number_server += 1
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.DNL_NEW_ACK, timestamp,
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.DNL_NEW_ACK, timestamp,
                                       payload, self.sequence_number_server)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
         self.sequence_number_server += 1
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.SEND, timestamp,
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.SEND, timestamp,
                                       payload, self.sequence_number_server)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
 
@@ -212,7 +212,7 @@ class Server:
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
         self.sequence_number_server += 1
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.UPL_NEW_ACK, timestamp,
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.UPL_NEW_ACK, timestamp,
                                       payload, self.sequence_number_server)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
         status, rsp = self.networkInterface.receive_msg(blocking=True)
@@ -232,7 +232,7 @@ class Server:
                 last = True
                 f.close()
                 payload.ljust(512, '0'.encode('utf-8'))  # padding
-            message = FileTransferMessage(self.own_address, FileTransferMessageTypes.DAT, timestamp,
+            message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.DAT, timestamp,
                                           payload, self.sequence_number_server, last)
             self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
             # Miután elküldött mindent, vár egy FIN-üzenetre, hogy a kliens megkapta-e az utolsó darabot is
@@ -271,7 +271,7 @@ class Server:
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
         self.sequence_number_server += 1
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.ACK_FIN, timestamp,
                                       payload, self.sequence_number_server)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
 
@@ -279,7 +279,7 @@ class Server:
         timestamp = get_current_timestamp()
         payload = filename.encode('utf-8')
         self.sequence_number_server += 1
-        message = FileTransferMessage(self.own_address, FileTransferMessageTypes.FIN, timestamp,
+        message = FileTransferMessage.FileTransferMessage(self.own_address, FileTransferMessageTypes.FIN, timestamp,
                                       payload, self.sequence_number_server)
         self.networkInterface.send_msg(self.active_client, encrypt_message(message, self.session_key))
         status, rsp = self.networkInterface.receive_msg(blocking=True)
